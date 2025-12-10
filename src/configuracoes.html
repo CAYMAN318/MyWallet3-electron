@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyWallet3 - Configurações (Vue.js)</title>
+    
+    <!-- Bibliotecas Locais -->
+    <script src="libs/tailwindcss.js"></script>
+    <script src="libs/vue.global.js"></script>
+    <script src="libs/lucide.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        /* Transições de Modal */
+        .modal-enter-active, .modal-leave-active { transition: opacity 0.3s ease; }
+        .modal-enter-from, .modal-leave-to { opacity: 0; }
+        
+        /* Checkbox Customizado */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #10B981;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #10B981;
+        }
+        /* Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        /* Garante alinhamento dos ícones */
+        span.icon-wrapper { display: inline-flex; align-items: center; }
+    </style>
+</head>
+<body class="p-6 text-gray-800">
+
+    <div id="app" class="max-w-6xl mx-auto">
+        
+        <!-- Cabeçalho -->
+        <div class="mb-8 border-b border-gray-200 pb-4">
+            <h1 class="text-3xl font-bold text-gray-900">Configurações</h1>
+            <p class="text-sm text-gray-500 mt-1">Gerencie suas contas, categorias e preferências.</p>
+        </div>
+
+        <!-- Navegação de Abas -->
+        <div class="flex space-x-1 bg-gray-100 p-1 rounded-xl mb-6 w-fit">
+            <button v-for="tab in tabs" :key="tab.id"
+                @click="currentTab = tab.id"
+                :class="[
+                    'px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2',
+                    currentTab === tab.id 
+                        ? 'bg-white text-gray-900 shadow-sm' 
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                ]"
+            >
+                <span class="icon-wrapper" v-html="getIcon(tab.icon, 'w-4 h-4')"></span>
+                {{ tab.label }}
+            </button>
+        </div>
+
+        <!-- CONTEÚDO: CONTAS -->
+        <div v-if="currentTab === 'contas'" class="space-y-6 animate-fade-in">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-gray-800">Minhas Contas</h2>
+                <button @click="abrirModal('conta')" class="bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition">
+                    <span class="icon-wrapper" v-html="getIcon('plus', 'w-4 h-4')"></span> Nova Conta
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div v-for="conta in contas" :key="conta.id" class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition group relative">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="p-2 bg-gray-50 rounded-lg">
+                            <span class="icon-wrapper" v-html="getIcon(conta.is_credit_card ? 'credit-card' : 'wallet', 'w-6 h-6 text-gray-600')"></span>
+                        </div>
+                        <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                            <button @click="editarConta(conta)" class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md">
+                                <span class="icon-wrapper" v-html="getIcon('edit-2', 'w-4 h-4')"></span>
+                            </button>
+                            <button @click="excluirItem('conta', conta.id)" class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md">
+                                <span class="icon-wrapper" v-html="getIcon('trash-2', 'w-4 h-4')"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <h3 class="font-bold text-gray-900">{{ conta.name }}</h3>
+                    <p class="text-sm text-gray-500 mt-1">Saldo Inicial: {{ formatarMoeda(conta.initial_balance) }}</p>
+                    <span v-if="conta.is_credit_card" class="absolute top-5 right-14 px-2 py-0.5 bg-purple-50 text-purple-700 text-[10px] font-bold uppercase tracking-wider rounded-full border border-purple-100">
+                        Crédito
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTEÚDO: CATEGORIAS (DESPESAS) -->
+        <div v-if="currentTab === 'despesas'" class="space-y-6 animate-fade-in">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-gray-800">Categorias de Despesa</h2>
+                <button @click="abrirModal('categoria_despesa')" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition">
+                    <span class="icon-wrapper" v-html="getIcon('plus', 'w-4 h-4')"></span> Nova Categoria
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div v-for="cat in categoriasDespesa" :key="cat.id" class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition group">
+                    <div class="p-4 flex justify-between items-center border-b border-gray-50 bg-gray-50/50">
+                        <div class="flex items-center gap-3">
+                            <div class="w-3 h-3 rounded-full" :style="{ backgroundColor: cat.color || '#ef4444' }"></div>
+                            <h3 class="font-bold text-gray-900">{{ cat.name }}</h3>
+                            <span v-if="cat.is_fixed" class="px-2 py-0.5 bg-gray-200 text-gray-600 text-[10px] font-bold uppercase rounded">Fixo</span>
+                        </div>
+                        <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                            <button @click="editarCategoria(cat, 'expense')" class="p-1.5 text-gray-400 hover:text-blue-600 rounded-md">
+                                <span class="icon-wrapper" v-html="getIcon('settings-2', 'w-4 h-4')"></span>
+                            </button>
+                            <button @click="excluirItem('categoria', cat.id)" class="p-1.5 text-gray-400 hover:text-red-600 rounded-md">
+                                <span class="icon-wrapper" v-html="getIcon('trash-2', 'w-4 h-4')"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Lista de Subgrupos (Preview) -->
+                    <div class="p-4 bg-white min-h-[60px]">
+                        <div v-if="parseSubgroups(cat.subgroups).length > 0" class="flex flex-wrap gap-2">
+                            <span v-for="sub in parseSubgroups(cat.subgroups).slice(0, 4)" class="px-2 py-1 bg-gray-50 border border-gray-100 rounded text-xs text-gray-600 flex items-center gap-1">
+                                {{ sub.name }}
+                                <span class="icon-wrapper" v-if="sub.is_fixed" v-html="getIcon('lock', 'w-3 h-3 text-red-400')"></span>
+                            </span>
+                            <span v-if="parseSubgroups(cat.subgroups).length > 4" class="text-xs text-gray-400 self-center">+{{ parseSubgroups(cat.subgroups).length - 4 }}</span>
+                        </div>
+                        <p v-else class="text-xs text-gray-400 italic">Sem subgrupos definidos</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTEÚDO: CATEGORIAS (RECEITAS) -->
+        <div v-if="currentTab === 'receitas'" class="space-y-6 animate-fade-in">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-gray-800">Categorias de Receita</h2>
+                <button @click="abrirModal('categoria_receita')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition">
+                    <span class="icon-wrapper" v-html="getIcon('plus', 'w-4 h-4')"></span> Nova Categoria
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div v-for="cat in categoriasReceita" :key="cat.id" class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center group">
+                    <div class="flex items-center gap-3">
+                        <div class="w-2 h-8 bg-emerald-500 rounded-full"></div>
+                        <h3 class="font-bold text-gray-900">{{ cat.name }}</h3>
+                        <span v-if="cat.is_fixed" class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded">Fixo</span>
+                    </div>
+                    <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                        <button @click="editarCategoria(cat, 'revenue')" class="p-1.5 text-gray-400 hover:text-blue-600 rounded-md">
+                            <span class="icon-wrapper" v-html="getIcon('edit-2', 'w-4 h-4')"></span>
+                        </button>
+                        <button @click="excluirItem('categoria', cat.id)" class="p-1.5 text-gray-400 hover:text-red-600 rounded-md">
+                            <span class="icon-wrapper" v-html="getIcon('trash-2', 'w-4 h-4')"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL GENÉRICO -->
+        <Transition name="modal">
+            <div v-if="modal.aberto" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" @click.self="fecharModal">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+                    
+                    <!-- Header Modal -->
+                    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                        <h3 class="font-bold text-lg text-gray-800">{{ modal.titulo }}</h3>
+                        <button @click="fecharModal" class="text-gray-400 hover:text-gray-600">
+                             <span class="icon-wrapper" v-html="getIcon('x', 'w-5 h-5')"></span>
+                        </button>
+                    </div>
+
+                    <!-- Body Modal -->
+                    <div class="p-6 overflow-y-auto custom-scrollbar">
+                        <form @submit.prevent="salvarModal" id="modalForm" class="space-y-4">
+                            
+                            <!-- Campos de Conta -->
+                            <div v-if="modal.tipo === 'conta'" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Nome da Conta</label>
+                                    <input type="text" v-model="form.name" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Saldo Inicial</label>
+                                    <input type="number" step="0.01" v-model="form.initialBalance" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                                </div>
+                                <label class="flex items-center gap-2 cursor-pointer bg-gray-50 p-3 rounded-lg border">
+                                    <input type="checkbox" v-model="form.isCreditCard" class="text-blue-600 rounded">
+                                    <span class="text-sm font-medium text-gray-700">É cartão de crédito?</span>
+                                </label>
+                            </div>
+
+                            <!-- Campos de Categoria -->
+                            <div v-else class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Nome da Categoria</label>
+                                    <input type="text" v-model="form.name" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                                </div>
+
+                                <div class="flex items-center gap-4">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" v-model="form.isFixed" class="w-4 h-4 text-blue-600 rounded">
+                                        <span class="text-sm text-gray-700">Gasto/Ganho Mensal Fixo (Padrão)</span>
+                                    </label>
+                                    
+                                    <div v-if="modal.tipo === 'categoria_despesa'">
+                                        <input type="color" v-model="form.color" class="h-8 w-14 rounded cursor-pointer border p-0.5">
+                                    </div>
+                                </div>
+
+                                <!-- EDITOR DE SUBGRUPOS (Apenas Despesas) -->
+                                <div v-if="modal.tipo === 'categoria_despesa'" class="mt-6 pt-6 border-t border-gray-100">
+                                    <h4 class="font-medium text-gray-800 mb-3 flex justify-between items-center">
+                                        Subgrupos
+                                        <span class="text-xs text-gray-500 font-normal">Ex: Luz, Água (dentro de Moradia)</span>
+                                    </h4>
+                                    
+                                    <div class="space-y-2 mb-3">
+                                        <div v-for="(sub, idx) in form.subgroups" :key="idx" class="flex items-center gap-2 animate-fade-in">
+                                            <input type="text" v-model="sub.name" placeholder="Nome do subgrupo" class="flex-1 px-3 py-1.5 text-sm border rounded-md outline-none focus:border-blue-500">
+                                            
+                                            <!-- Toggle Fixo Individual -->
+                                            <label class="flex items-center gap-1 cursor-pointer px-2 py-1.5 rounded hover:bg-gray-100 transition" title="Marcar como Despesa Fixa">
+                                                <input type="checkbox" v-model="sub.is_fixed" class="rounded text-red-500 focus:ring-red-500">
+                                                <span class="text-xs font-medium" :class="sub.is_fixed ? 'text-red-600' : 'text-gray-400'">Fixo</span>
+                                            </label>
+
+                                            <button type="button" @click="removerSubgrupo(idx)" class="text-gray-400 hover:text-red-500 p-1">
+                                                <span class="icon-wrapper" v-html="getIcon('trash', 'w-4 h-4')"></span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <button type="button" @click="adicionarSubgrupo" class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1">
+                                        <span class="icon-wrapper" v-html="getIcon('plus', 'w-4 h-4')"></span> Adicionar Subgrupo
+                                    </button>
+                                </div>
+                            </div>
+
+                        </form>
+                    </div>
+
+                    <!-- Footer Modal -->
+                    <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+                        <button @click="fecharModal" class="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg text-sm font-medium transition">Cancelar</button>
+                        <button @click="salvarModal" :disabled="loading" class="px-6 py-2 bg-gray-900 hover:bg-black text-white rounded-lg text-sm font-medium shadow-lg transition flex items-center gap-2">
+                            <span v-if="loading" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                            Salvar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
+
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, nextTick } = Vue;
+
+        createApp({
+            setup() {
+                // Estado
+                const loading = ref(false);
+                const currentTab = ref('contas');
+                const tabs = [
+                    { id: 'contas', label: 'Contas & Cartões', icon: 'credit-card' },
+                    { id: 'despesas', label: 'Categorias de Despesa', icon: 'trending-down' },
+                    { id: 'receitas', label: 'Categorias de Receita', icon: 'trending-up' }
+                ];
+
+                const contas = ref([]);
+                const categoriasDespesa = ref([]);
+                const categoriasReceita = ref([]);
+
+                // Modal e Formulário
+                const modal = ref({ aberto: false, titulo: '', tipo: '', editId: null });
+                const form = ref({
+                    name: '',
+                    initialBalance: 0,
+                    isCreditCard: false,
+                    isFixed: false,
+                    color: '#ef4444',
+                    subgroups: [] // Array de objetos {name: string, is_fixed: boolean}
+                });
+
+                // Helpers de Ícones
+                const getIcon = (name, classes = "") => {
+                    try {
+                        if (!window.lucide) return "";
+                        const pascalName = name.split('-').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('');
+                        const iconNode = (window.lucide.icons && window.lucide.icons[pascalName]) || window.lucide[pascalName];
+                        if (iconNode && typeof iconNode.toSvg === 'function') return iconNode.toSvg({ class: classes });
+                        return "";
+                    } catch (e) { return ""; }
+                };
+
+                // Métodos de Parseamento (Compatibilidade Retroativa)
+                const parseSubgroups = (jsonString) => {
+                    if (!jsonString) return [];
+                    try {
+                        const parsed = JSON.parse(jsonString);
+                        // Converte array de strings antigo ["A", "B"] para objetos [{name:"A", is_fixed:false}, ...]
+                        return parsed.map(item => {
+                            if (typeof item === 'string') return { name: item, is_fixed: false };
+                            return item;
+                        });
+                    } catch (e) { return []; }
+                };
+
+                const formatarMoeda = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+
+                // Carregamento de Dados
+                const carregarDados = async () => {
+                    try {
+                        const [resContas, resDespesas, resReceitas] = await Promise.all([
+                            fetch('http://localhost:3000/api/configuracoes?type=Conta'),
+                            fetch('http://localhost:3000/api/configuracoes?type=GrupoDespesa'),
+                            fetch('http://localhost:3000/api/configuracoes?type=GrupoReceita')
+                        ]);
+                        
+                        contas.value = await resContas.json();
+                        categoriasDespesa.value = await resDespesas.json();
+                        categoriasReceita.value = await resReceitas.json();
+                    } catch (e) { console.error("Erro ao carregar:", e); }
+                };
+
+                // Ações do Modal
+                const abrirModal = (tipo) => {
+                    modal.value = { aberto: true, titulo: tipo === 'conta' ? 'Nova Conta' : 'Nova Categoria', tipo, editId: null };
+                    form.value = { name: '', initialBalance: 0, isCreditCard: false, isFixed: false, color: '#ef4444', subgroups: [] };
+                };
+
+                const fecharModal = () => { modal.value.aberto = false; };
+
+                const editarConta = (conta) => {
+                    modal.value = { aberto: true, titulo: 'Editar Conta', tipo: 'conta', editId: conta.id };
+                    form.value = { ...conta };
+                };
+
+                const editarCategoria = (cat, tipoStr) => {
+                    const isExpense = tipoStr === 'expense';
+                    modal.value = { 
+                        aberto: true, 
+                        titulo: 'Editar Categoria', 
+                        tipo: isExpense ? 'categoria_despesa' : 'categoria_receita', 
+                        editId: cat.id 
+                    };
+                    
+                    form.value = { 
+                        name: cat.name, 
+                        isFixed: Boolean(cat.is_fixed),
+                        color: cat.color || '#ef4444', 
+                        subgroups: parseSubgroups(cat.subgroups) 
+                    };
+                };
+
+                const adicionarSubgrupo = () => {
+                    form.value.subgroups.push({ name: '', is_fixed: false });
+                };
+
+                const removerSubgrupo = (index) => {
+                    form.value.subgroups.splice(index, 1);
+                };
+
+                const salvarModal = async () => {
+                    loading.value = true;
+                    try {
+                        let url = 'http://localhost:3000/api/configuracoes';
+                        let method = 'POST';
+                        let payload = {};
+
+                        // Define URL e Método (Create vs Update)
+                        if (modal.value.editId) {
+                            method = 'PUT';
+                            // Para PUT, o backend espera a rota específica com ID
+                            const endpoint = modal.value.tipo === 'conta' ? 'conta' : 'categoria';
+                            url += `/${endpoint}/${modal.value.editId}`;
+                        } 
+                        // NOTA CRÍTICA: Para POST (criação), NÃO concatenamos /conta ou /categoria.
+                        // O backend usa uma rota unificada '/' e decide baseado no campo 'type' do body.
+
+                        // Monta Payload
+                        if (modal.value.tipo === 'conta') {
+                            payload = { 
+                                type: 'Conta', // CORREÇÃO: Adicionado o type para o backend saber que é conta
+                                name: form.value.name, 
+                                initialBalance: form.value.initialBalance, 
+                                isCreditCard: form.value.isCreditCard 
+                            };
+                        } else {
+                            // Limpa subgrupos vazios antes de salvar
+                            const cleanSubgroups = form.value.subgroups.filter(s => s.name.trim() !== '');
+                            
+                            payload = {
+                                name: form.value.name,
+                                isFixed: form.value.isFixed,
+                                // CORREÇÃO: O backend espera 'GrupoDespesa' ou 'GrupoReceita' para cair no bloco if correto
+                                type: modal.value.tipo === 'categoria_despesa' ? 'GrupoDespesa' : 'GrupoReceita',
+                                subgroups: cleanSubgroups 
+                            };
+
+                            // Salva cor no localStorage (legado) se for despesa
+                            if (modal.value.tipo === 'categoria_despesa' && modal.value.editId) {
+                                const savedColors = JSON.parse(localStorage.getItem('mywallet_cat_colors') || '{}');
+                                savedColors[modal.value.editId] = form.value.color;
+                                localStorage.setItem('mywallet_cat_colors', JSON.stringify(savedColors));
+                            }
+                        }
+
+                        const res = await fetch(url, {
+                            method,
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (res.ok) {
+                            fecharModal();
+                            carregarDados();
+                        } else {
+                            // Tenta ler a mensagem de erro do backend se houver
+                            const errorData = await res.json().catch(() => ({}));
+                            alert("Erro ao salvar: " + (errorData.error || "Erro desconhecido"));
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        alert("Erro de conexão com o servidor.");
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const excluirItem = async (tipo, id) => {
+                    if (!confirm("Tem certeza que deseja excluir?")) return;
+                    try {
+                        const res = await fetch(`http://localhost:3000/api/configuracoes/${tipo}/${id}`, { method: 'DELETE' });
+                        if (res.ok) {
+                            carregarDados();
+                        } else {
+                            const data = await res.json().catch(() => ({}));
+                            alert(data.error || "Erro ao excluir.");
+                        }
+                    } catch (e) { alert("Erro de conexão ao excluir."); }
+                };
+
+                onMounted(() => {
+                    carregarDados();
+                });
+
+                return {
+                    currentTab, tabs, contas, categoriasDespesa, categoriasReceita,
+                    modal, form, loading,
+                    abrirModal, fecharModal, editarConta, editarCategoria, salvarModal, excluirItem,
+                    formatarMoeda, parseSubgroups,
+                    adicionarSubgrupo, removerSubgrupo,
+                    getIcon
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

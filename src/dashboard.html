@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyWallet3 - Dashboard</title>
+    
+    <!-- Bibliotecas Locais -->
+    <script src="libs/tailwindcss.js"></script>
+    <script src="libs/vue.global.js"></script>
+    <script src="libs/chart.js"></script>
+    <script src="libs/lucide.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .card { transition: transform 0.2s, box-shadow 0.2s; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        /* Garante alinhamento dos ícones */
+        span.icon-wrapper { display: inline-flex; align-items: center; }
+    </style>
+</head>
+<body class="p-6 text-gray-800">
+
+    <div id="app" class="max-w-6xl mx-auto">
+        
+        <!-- Cabeçalho -->
+        <div class="flex justify-between items-center mb-8 border-b border-gray-200 pb-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Visão Geral</h1>
+                <p class="text-sm text-gray-500 mt-1">Resumo da sua saúde financeira.</p>
+            </div>
+            <button @click="carregarDados" :disabled="loading" class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 bg-blue-50 px-3 py-2 rounded-lg transition-colors">
+                <span class="icon-wrapper" v-html="getIcon('refresh-cw', loading ? 'w-4 h-4 animate-spin' : 'w-4 h-4')"></span>
+                Atualizar
+            </button>
+        </div>
+
+        <!-- Cards de Resumo -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            
+            <!-- Saldo Total -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 card relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-4 opacity-10">
+                    <span class="icon-wrapper" v-html="getIcon('wallet', 'w-16 h-16 text-blue-600')"></span>
+                </div>
+                <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Saldo Acumulado</p>
+                <h2 class="text-2xl font-bold text-gray-800">{{ formatarMoeda(dados.saldoTotal) }}</h2>
+                <div class="mt-4 flex items-center gap-1 text-xs text-blue-600 font-medium">
+                    <span class="icon-wrapper" v-html="getIcon('info', 'w-3 h-3')"></span>
+                    Todas as contas
+                </div>
+            </div>
+
+            <!-- Receitas do Mês -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 card border-l-4 border-l-emerald-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Receitas (Mês)</p>
+                        <h2 class="text-2xl font-bold text-emerald-600">+ {{ formatarMoeda(dados.resumoMes.receitas) }}</h2>
+                    </div>
+                    <div class="p-2 bg-emerald-50 rounded-lg text-emerald-600">
+                        <span class="icon-wrapper" v-html="getIcon('trending-up', 'w-6 h-6')"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Despesas do Mês -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 card border-l-4 border-l-red-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Despesas (Mês)</p>
+                        <h2 class="text-2xl font-bold text-red-600">- {{ formatarMoeda(dados.resumoMes.despesas) }}</h2>
+                    </div>
+                    <div class="p-2 bg-red-50 rounded-lg text-red-600">
+                        <span class="icon-wrapper" v-html="getIcon('trending-down', 'w-6 h-6')"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Balanço do Mês -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 card">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Balanço (Mês)</p>
+                        <h2 :class="['text-2xl font-bold', dados.resumoMes.saldo >= 0 ? 'text-emerald-600' : 'text-red-600']">
+                            {{ formatarMoeda(dados.resumoMes.saldo) }}
+                        </h2>
+                    </div>
+                    <div :class="['p-2 rounded-lg', dados.resumoMes.saldo >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600']">
+                        <span class="icon-wrapper" v-html="getIcon('activity', 'w-6 h-6')"></span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Gráficos -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- Gráfico Histórico -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="icon-wrapper" v-html="getIcon('bar-chart-2', 'w-5 h-5 text-gray-400')"></span>
+                    Histórico & Projeção (6 Meses)
+                </h3>
+                <div class="relative h-64 w-full">
+                    <canvas id="chartHistorico"></canvas>
+                </div>
+            </div>
+
+            <!-- Gráfico Categorias -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="icon-wrapper" v-html="getIcon('pie-chart', 'w-5 h-5 text-gray-400')"></span>
+                    Despesas por Categoria (Mês Atual)
+                </h3>
+                <div class="relative h-64 w-full flex justify-center">
+                    <canvas id="chartCategorias"></canvas>
+                    <div v-if="!temDadosCategorias" class="absolute inset-0 flex items-center justify-center bg-white/80 text-gray-400 text-sm">
+                        Sem despesas neste mês
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted, computed } = Vue;
+
+        createApp({
+            setup() {
+                const loading = ref(false);
+                const dados = ref({
+                    saldoTotal: 0,
+                    resumoMes: { receitas: 0, despesas: 0, saldo: 0 },
+                    graficoCategorias: [],
+                    graficoHistorico: []
+                });
+
+                // Refs para instâncias do Chart.js
+                let chartHistoricoInstance = null;
+                let chartCategoriasInstance = null;
+
+                const temDadosCategorias = computed(() => dados.value.graficoCategorias && dados.value.graficoCategorias.length > 0);
+
+                const formatarMoeda = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+
+                // Função de Ícones Segura
+                const getIcon = (name, classes = "") => {
+                    try {
+                        if (!window.lucide) return "";
+                        const pascalName = name.split('-').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('');
+                        const iconNode = (window.lucide.icons && window.lucide.icons[pascalName]) || window.lucide[pascalName];
+                        if (iconNode && typeof iconNode.toSvg === 'function') return iconNode.toSvg({ class: classes });
+                        return "";
+                    } catch (e) { return ""; }
+                };
+
+                const carregarDados = async () => {
+                    loading.value = true;
+                    try {
+                        const res = await fetch('http://localhost:3000/api/dashboard');
+                        if (!res.ok) throw new Error('Erro na API');
+                        const data = await res.json();
+                        dados.value = data;
+                        
+                        renderizarGraficos();
+                    } catch (error) {
+                        console.error("Erro ao carregar dashboard:", error);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const renderizarGraficos = () => {
+                    // 1. Gráfico Histórico
+                    const ctxHist = document.getElementById('chartHistorico').getContext('2d');
+                    if (chartHistoricoInstance) chartHistoricoInstance.destroy();
+
+                    const historicoMap = {};
+                    dados.value.graficoHistorico.forEach(item => {
+                        if (!historicoMap[item.mes]) historicoMap[item.mes] = { revenue: 0, expense: 0 };
+                        historicoMap[item.mes][item.type] = item.total;
+                    });
+                    
+                    const mesesOrdenados = Object.keys(historicoMap).sort();
+                    const dataReceitas = mesesOrdenados.map(m => historicoMap[m].revenue);
+                    const dataDespesas = mesesOrdenados.map(m => historicoMap[m].expense);
+
+                    chartHistoricoInstance = new Chart(ctxHist, {
+                        type: 'bar',
+                        data: {
+                            labels: mesesOrdenados,
+                            datasets: [
+                                { label: 'Receitas', data: dataReceitas, backgroundColor: '#10b981', borderRadius: 4 },
+                                { label: 'Despesas', data: dataDespesas, backgroundColor: '#ef4444', borderRadius: 4 }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { position: 'bottom' } },
+                            scales: { y: { beginAtZero: true, grid: { color: '#f3f4f6' } }, x: { grid: { display: false } } }
+                        }
+                    });
+
+                    // 2. Gráfico Categorias
+                    if (temDadosCategorias.value) {
+                        const ctxCat = document.getElementById('chartCategorias').getContext('2d');
+                        if (chartCategoriasInstance) chartCategoriasInstance.destroy();
+
+                        chartCategoriasInstance = new Chart(ctxCat, {
+                            type: 'doughnut',
+                            data: {
+                                labels: dados.value.graficoCategorias.map(c => c.name),
+                                datasets: [{
+                                    data: dados.value.graficoCategorias.map(c => c.total),
+                                    backgroundColor: ['#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#6366f1'],
+                                    borderWidth: 0
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } } }
+                            }
+                        });
+                    }
+                };
+
+                onMounted(() => {
+                    carregarDados();
+                });
+
+                return {
+                    loading,
+                    dados,
+                    temDadosCategorias,
+                    formatarMoeda,
+                    carregarDados,
+                    getIcon
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
