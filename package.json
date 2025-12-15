@@ -1,12 +1,13 @@
 {
   "name": "mywallet3-electron",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Gerenciador Financeiro Pessoal Local com Electron",
   "main": "main.js",
   "scripts": {
     "start": "electron . --no-sandbox",
     "build:win": "electron-builder --win",
     "build:linux": "electron-builder --linux",
+    "build:all": "electron-builder -mwl",
     "postinstall": "electron-builder install-app-deps",
     "rebuild": "electron-rebuild"
   },
@@ -17,7 +18,8 @@
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "better-sqlite3": "^11.0.0",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "multer": "^1.4.5-lts.1"
   },
   "devDependencies": {
     "electron": "^28.3.0",
@@ -34,17 +36,30 @@
       "**/*",
       "!node_modules/*",
       "!dist/*",
-      "!src/libs/tailwindcss.js" 
+      "!*.map",
+      "!*.md",
+      "!temp_uploads/*"
     ],
     "extraResources": [
       "bd_gestor_financeiro.db"
     ],
     "win": {
       "target": "nsis",
-      "icon": "build/icon.ico" 
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     },
     "linux": {
-      "target": "AppImage"
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Office"
     }
   }
 }

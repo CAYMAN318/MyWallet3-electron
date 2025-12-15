@@ -1,0 +1,13 @@
+/node_modules
+npm-debug.log*
+yarn-error.log
+.yarn-integrity
+/dist/
+/rebuild_cache/
+build-*.log
+bd_gestor_financeiro.db
+bd_gestor_financeiro.db-shm
+bd_gestor_financeiro.db-wal
+.env
+.DS_Store
+Thumbs.db
