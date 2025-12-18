@@ -3,35 +3,73 @@ const router = express.Router();
 const db = require('../database'); 
 const { v4: uuidv4 } = require('uuid');
 
-// Função auxiliar para preparar e executar consultas síncronas (better-sqlite3)
 const runStatement = (sql, params = []) => {
     return db.prepare(sql).run(params);
 };
 
-// Função auxiliar para buscar todos os resultados (better-sqlite3)
 const queryAll = (sql, params = []) => {
     return db.prepare(sql).all(params);
+};
+
+/**
+ * Função Auxiliar para limpar subgrupos (Ultra Robusta)
+ * Remove colchetes, aspas e formatação JSON para exibir apenas o texto limpo
+ */
+const limparSubgrupo = (sub) => {
+    if (!sub) return '';
+    
+    let resultado = sub;
+
+    // Se for um array literal
+    if (Array.isArray(sub)) {
+        resultado = sub.length > 0 ? sub[0] : '';
+    } else if (typeof sub === 'string') {
+        let trimmed = sub.trim();
+        
+        // Se parece um JSON ["Valor"]
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (Array.isArray(parsed)) {
+                    resultado = parsed.length > 0 ? parsed[0] : '';
+                } else {
+                    resultado = parsed;
+                }
+            } catch (e) {
+                // Se o parse falhar, limpamos manualmente
+                resultado = trimmed.replace(/[\[\]\"\' ]/g, '');
+            }
+        } else {
+            resultado = trimmed;
+        }
+    }
+
+    // Limpeza final de caracteres residuais de JSON
+    return String(resultado).replace(/[\[\]\"\' ]/g, '').trim();
 };
 
 // GET: Listar todas as despesas
 router.get('/', (req, res) => {
     const sql = `
-        SELECT 
-            t.*, 
-            a.name as account_name, 
-            c.name as category_name 
+        SELECT t.*, a.name as account_name, c.name as category_name 
         FROM Transactions t
         LEFT JOIN Accounts a ON t.account_id = a.id
         LEFT JOIN Categories c ON t.category_id = c.id
         WHERE t.type = 'expense'
         ORDER BY t.date DESC
     `;
-    
     try {
         const rows = queryAll(sql, []);
-        res.json(rows);
+        
+        // Limpeza agressiva no envio para o frontend
+        const rowsTratadas = rows.map(row => ({
+            ...row,
+            subgroup: limparSubgrupo(row.subgroup)
+        }));
+        
+        res.json(rowsTratadas);
     } catch (err) {
-        console.error(">>> [ERRO DB] Falha ao buscar despesas:", err.message);
+        console.error("Erro ao listar despesas:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -40,54 +78,72 @@ router.get('/', (req, res) => {
 router.post('/', (req, res) => {
     const { 
         description, amount, date, accountId, categoryId, subgroup, 
-        isInstallment, numParcelas, isFixed, firstInstallmentDate 
+        isInstallment, numParcelas, isFixed 
     } = req.body;
 
     const totalInsertions = isInstallment ? parseInt(numParcelas) : 1;
-    const isInstallmentInt = isInstallment ? 1 : 0;
-    const fixedInt = isFixed ? 1 : 0;
-    const valorParcela = isInstallment ? (parseFloat(amount) / totalInsertions).toFixed(2) : amount;
     const groupId = isInstallment ? uuidv4() : null;
+    
+    // Limpamos o subgrupo antes de salvar para evitar ["Valor"] no banco
+    const subgrupoLimpo = limparSubgrupo(subgroup);
 
-    if (!description || !amount || !date || !categoryId) {
-        return res.status(400).json({ error: "Descrição, Valor, Data e Categoria são obrigatórios." });
-    }
+    const valorParcela = parseFloat(amount) / totalInsertions;
+    const fixedInt = isFixed ? 1 : 0;
+    const isInstallmentInt = isInstallment ? 1 : 0;
 
-    // Inicia a transação (para garantir atomicidade em caso de parcelas)
-    db.exec('BEGIN');
-
-    const sql = `
-        INSERT INTO Transactions (
-            account_id, category_id, description, type, amount, date, 
-            is_installment, installment_number, installment_total, installment_group_id, subgroup, is_fixed
-        )
+    const insertSql = `
+        INSERT INTO Transactions 
+        (account_id, category_id, description, type, amount, date, is_fixed, is_installment, installment_number, installment_total, installment_group_id, subgroup)
         VALUES (?, ?, ?, 'expense', ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     try {
-        let baseDate = new Date(firstInstallmentDate || date);
-        
-        for (let i = 0; i < totalInsertions; i++) {
-            // Calcula a data de vencimento da parcela (Mês da primeira parcela + i meses)
-            let insertionDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate());
-            let dataString = insertionDate.toISOString().split('T')[0];
+        db.exec('BEGIN');
 
-            const descFinal = isInstallment ? `[Parc ${i + 1}/${totalInsertions}] ${description}` : description;
-                
-            runStatement(sql, [
-                accountId, categoryId, descFinal, valorParcela, dataString,
-                isInstallmentInt, i + 1, totalInsertions, groupId, subgroup, fixedInt
+        for (let i = 0; i < totalInsertions; i++) {
+            const [year, month, day] = date.split('-').map(Number);
+            const dataObj = new Date(year, month - 1, day);
+            dataObj.setMonth(dataObj.getMonth() + i);
+
+            const y = dataObj.getFullYear();
+            const m = String(dataObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dataObj.getDate()).padStart(2, '0');
+            const dataString = `${y}-${m}-${d}`;
+
+            runStatement(insertSql, [
+                accountId, categoryId, description, valorParcela, dataString,
+                fixedInt, isInstallmentInt, i + 1, totalInsertions, groupId, subgrupoLimpo
             ]);
         }
 
         db.exec('COMMIT');
-        console.log(">>> [POST] Despesa salva com sucesso!");
-        res.status(201).json({ message: "Despesa(s) salva(s) com sucesso!" });
-
+        res.status(201).json({ message: "Salvo com sucesso!" });
     } catch (err) {
         db.exec('ROLLBACK');
-        console.error(">>> [ERRO POST] Erro ao salvar despesa:", err);
-        res.status(500).json({ error: "Erro ao processar transação no banco." });
+        console.error("Erro ao salvar despesa:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// PUT: Editar Despesa
+router.put('/:id', (req, res) => {
+    const { id } = req.params;
+    const { description, amount, date, accountId, categoryId, subgroup } = req.body;
+
+    const subgrupoLimpo = limparSubgrupo(subgroup);
+
+    const sql = `
+        UPDATE Transactions 
+        SET description = ?, amount = ?, date = ?, account_id = ?, category_id = ?, subgroup = ?
+        WHERE id = ?
+    `;
+
+    try {
+        runStatement(sql, [description, amount, date, accountId, categoryId, subgrupoLimpo, id]);
+        res.json({ message: "Atualizado com sucesso!" });
+    } catch (err) {
+        console.error("Erro ao editar despesa:", err);
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -95,28 +151,16 @@ router.post('/', (req, res) => {
 router.delete('/:id', (req, res) => {
     const { id } = req.params;
     const { groupId } = req.query;
-
-    let sql = '';
-    let params = [];
-
-    // Se houver groupId, exclui todas as parcelas do grupo
-    if (groupId && groupId !== 'null' && groupId !== 'undefined') {
-        sql = "DELETE FROM Transactions WHERE installment_group_id = ?";
-        params = [groupId];
-    } else {
-        // Senão, exclui apenas o item único
-        sql = "DELETE FROM Transactions WHERE id = ?";
-        params = [id];
-    }
-
+    
+    let sql = (groupId && groupId !== 'null' && groupId !== 'undefined') ? 
+        "DELETE FROM Transactions WHERE installment_group_id = ?" : 
+        "DELETE FROM Transactions WHERE id = ?";
+    
     try {
-        const result = runStatement(sql, params);
-        if (result.changes === 0) {
-            return res.status(404).json({ error: "Despesa não encontrada." });
-        }
-        res.json({ message: "Despesa(s) excluída(s)!" });
+        runStatement(sql, [(groupId && groupId !== 'null' && groupId !== 'undefined') ? groupId : id]);
+        res.json({ message: "Excluído com sucesso!" });
     } catch (err) {
-        console.error("Erro ao excluir despesa:", err.message);
+        console.error("Erro ao excluir despesa:", err);
         res.status(500).json({ error: err.message });
     }
 });
