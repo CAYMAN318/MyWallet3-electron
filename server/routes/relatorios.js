@@ -6,38 +6,52 @@ const queryAll = (sql, params = []) => {
     return db.prepare(sql).all(params);
 };
 
-// Rota 1: Tendência Mensal (Gráfico)
+// Rota 1: Tendência Mensal (Gráfico) - ATUALIZADA com filtro de categoria
 router.get('/trend', (req, res) => {
-    const { months = 6 } = req.query;
+    const { months = 6, categoryId } = req.query;
     const numMonths = parseInt(months) || 6;
 
     const today = new Date();
-    // Cálculo de data sem usar toISOString para evitar erro de Timezone (importante no Brasil)
+    // Cálculo de data robusto
     const dataCorteDate = new Date(today.getFullYear(), today.getMonth() - numMonths + 1, 1);
     const ano = dataCorteDate.getFullYear();
     const mes = String(dataCorteDate.getMonth() + 1).padStart(2, '0');
     const dataCorte = `${ano}-${mes}-01`;
 
     try {
-        // Buscamos os dados agrupados por mês
-        // O strftime só funciona se a data for YYYY-MM-DD. 
-        const sql = `
-            SELECT 
-                strftime('%Y-%m', date) as period, 
-                type, 
-                SUM(amount) as total
-            FROM Transactions
-            WHERE date >= ?
-            GROUP BY period, type
-            ORDER BY period ASC;
-        `;
-        
-        const rawData = queryAll(sql, [dataCorte]);
+        let sql = '';
+        let params = [dataCorte];
 
-        // Se o strftime falhar (datas em formato errado), tentamos capturar o erro
-        if (rawData.length > 0 && rawData[0].period === null) {
-            console.error("AVISO: Datas no banco de dados não estão no formato YYYY-MM-DD");
+        if (categoryId && categoryId !== 'all') {
+            // Se houver categoria selecionada:
+            // Mostramos a RECEITA TOTAL vs DESPESA DA CATEGORIA SELECIONADA
+            sql = `
+                SELECT 
+                    strftime('%Y-%m', date) as period, 
+                    type, 
+                    SUM(amount) as total
+                FROM Transactions
+                WHERE date >= ? 
+                AND (type = 'revenue' OR (type = 'expense' AND category_id = ?))
+                GROUP BY period, type
+                ORDER BY period ASC;
+            `;
+            params.push(categoryId);
+        } else {
+            // Consulta padrão: Evolução Geral (Todas as Receitas vs Todas as Despesas)
+            sql = `
+                SELECT 
+                    strftime('%Y-%m', date) as period, 
+                    type, 
+                    SUM(amount) as total
+                FROM Transactions
+                WHERE date >= ?
+                GROUP BY period, type
+                ORDER BY period ASC;
+            `;
         }
+        
+        const rawData = queryAll(sql, [dataCorte, ...(categoryId && categoryId !== 'all' ? [categoryId] : [])]);
 
         // Organiza os dados para o formato que o Chart.js espera
         const periods = {};
@@ -46,7 +60,6 @@ router.get('/trend', (req, res) => {
             if (!periods[p]) {
                 periods[p] = { period: p, revenue: 0, expense: 0 };
             }
-            // Garante que o tipo seja comparado corretamente (minúsculo)
             const type = row.type.toLowerCase() === 'revenue' ? 'revenue' : 'expense';
             periods[p][type] = parseFloat(row.total) || 0;
         });
@@ -60,7 +73,7 @@ router.get('/trend', (req, res) => {
     }
 });
 
-// Rota 2: Busca Detalhada
+// Rota 2: Busca Detalhada (Mantida)
 router.get('/search', (req, res) => {
     const { inicio, fim } = req.query;
     try {
@@ -74,6 +87,7 @@ router.get('/search', (req, res) => {
         `;
         res.json(queryAll(sql, [inicio, fim]));
     } catch (error) {
+        console.error("Erro na busca detalhada:", error);
         res.status(500).json({ error: error.message });
     }
 });
