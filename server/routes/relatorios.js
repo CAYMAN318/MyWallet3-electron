@@ -2,78 +2,53 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database'); 
 
-const queryAll = (sql, params = []) => {
-    return db.prepare(sql).all(params);
-};
+const queryAll = (sql, params = []) => db.prepare(sql).all(params);
 
-// Rota 1: Tendência Mensal (Gráfico) - ATUALIZADA com filtro de categoria
 router.get('/trend', (req, res) => {
-    const { months = 6, categoryId } = req.query;
+    const { months = 6, categoryId, viewType = 'financeiro' } = req.query;
     const numMonths = parseInt(months) || 6;
+    
+    // 'date' = Fluxo Financeiro (Pagamento)
+    // 'purchase_date' = Fluxo de Consumo (Hábito de Gasto)
+    const dateColumn = viewType === 'consumo' ? 'purchase_date' : 'date';
 
     const today = new Date();
-    // Cálculo de data robusto
     const dataCorteDate = new Date(today.getFullYear(), today.getMonth() - numMonths + 1, 1);
-    const ano = dataCorteDate.getFullYear();
-    const mes = String(dataCorteDate.getMonth() + 1).padStart(2, '0');
-    const dataCorte = `${ano}-${mes}-01`;
+    const dataCorte = `${dataCorteDate.getFullYear()}-${String(dataCorteDate.getMonth()+1).padStart(2, '0')}-01`;
 
     try {
-        let sql = '';
+        let sql = `
+            SELECT 
+                strftime('%Y-%m', ${dateColumn}) as period, 
+                type, 
+                SUM(amount) as total
+            FROM Transactions
+            WHERE ${dateColumn} >= ?
+        `;
         let params = [dataCorte];
 
         if (categoryId && categoryId !== 'all') {
-            // Se houver categoria selecionada:
-            // Mostramos a RECEITA TOTAL vs DESPESA DA CATEGORIA SELECIONADA
-            sql = `
-                SELECT 
-                    strftime('%Y-%m', date) as period, 
-                    type, 
-                    SUM(amount) as total
-                FROM Transactions
-                WHERE date >= ? 
-                AND (type = 'revenue' OR (type = 'expense' AND category_id = ?))
-                GROUP BY period, type
-                ORDER BY period ASC;
-            `;
+            sql += ` AND (type = 'revenue' OR (type = 'expense' AND category_id = ?))`;
             params.push(categoryId);
-        } else {
-            // Consulta padrão: Evolução Geral (Todas as Receitas vs Todas as Despesas)
-            sql = `
-                SELECT 
-                    strftime('%Y-%m', date) as period, 
-                    type, 
-                    SUM(amount) as total
-                FROM Transactions
-                WHERE date >= ?
-                GROUP BY period, type
-                ORDER BY period ASC;
-            `;
         }
-        
-        const rawData = queryAll(sql, [dataCorte, ...(categoryId && categoryId !== 'all' ? [categoryId] : [])]);
 
-        // Organiza os dados para o formato que o Chart.js espera
+        sql += ` GROUP BY period, type ORDER BY period ASC;`;
+        
+        const rawData = queryAll(sql, params);
         const periods = {};
         rawData.forEach(row => {
             const p = row.period || "Indefinido";
-            if (!periods[p]) {
-                periods[p] = { period: p, revenue: 0, expense: 0 };
-            }
+            if (!periods[p]) periods[p] = { period: p, revenue: 0, expense: 0 };
             const type = row.type.toLowerCase() === 'revenue' ? 'revenue' : 'expense';
             periods[p][type] = parseFloat(row.total) || 0;
         });
         
-        const formattedData = Object.values(periods);
-        res.json(formattedData);
-
+        res.json(Object.values(periods));
     } catch (error) {
-        console.error("Erro Trend API:", error);
-        res.status(500).json({ error: "Erro ao processar gráfico" });
+        res.status(500).json({ error: error.message });
     }
 });
 
-// Rota 2: Busca Detalhada (Mantida)
 router.get('/search', (req, res) => {
     const { inicio, fim } = req.query;
     try {
@@ -87,7 +62,6 @@ router.get('/search', (req, res) => {
         `;
         res.json(queryAll(sql, [inicio, fim]));
     } catch (error) {
-        console.error("Erro na busca detalhada:", error);
         res.status(500).json({ error: error.message });
     }
 });

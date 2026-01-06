@@ -19,6 +19,22 @@
         .custom-scroll::-webkit-scrollbar { width: 5px; }
         .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        /* Círculo de Data para a listagem */
+        .date-circle {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f1f5f9;
+            color: #475569;
+            border-radius: 9999px;
+            font-weight: 800;
+            font-size: 12px;
+            border: 1px solid #e2e8f0;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body class="p-6 text-gray-800">
@@ -28,7 +44,7 @@
         <!-- Cabeçalho -->
         <div class="mb-8 border-b border-gray-200 pb-4">
             <h1 class="text-3xl font-extrabold text-gray-800">Relatórios Financeiros</h1>
-            <p class="text-sm text-gray-500 mt-1">Análise estratégica de despesas e receitas.</p>
+            <p class="text-sm text-gray-500 mt-1">Visão estratégica e análise de consumo.</p>
         </div>
 
         <!-- Navegação por Abas -->
@@ -50,126 +66,165 @@
             
             <!-- ABA 1: TENDÊNCIA (GRÁFICO) -->
             <div v-if="abaAtual === 'tendencia'" key="aba-tendencia" class="space-y-6">
-                
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <!-- Filtros Laterais -->
+                    <!-- Filtros do Gráfico -->
                     <div class="md:col-span-1 space-y-4">
                         <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                            <h3 class="text-xs font-bold text-gray-400 uppercase mb-4 flex items-center gap-2">
-                                <span class="icon-wrapper" v-html="getIcon('settings', 14)"></span>
-                                Opções do Gráfico
-                            </h3>
                             
-                            <div class="space-y-5">
-                                <div>
-                                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-2 ml-1">Período de Análise</label>
-                                    <select v-model="filtroMeses" @change="carregarRelatorioTrend" 
-                                        class="w-full bg-gray-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                                        <option :value="3">Últimos 3 meses</option>
-                                        <option :value="6">Últimos 6 meses</option>
-                                        <option :value="12">Últimos 12 meses</option>
-                                    </select>
+                            <!-- MODO DE ANÁLISE -->
+                            <div class="mb-6 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                                <label class="block text-[10px] font-bold text-blue-800 uppercase mb-2">Modo de Análise</label>
+                                <div class="flex gap-1">
+                                    <button @click="viewType = 'financeiro'; carregarRelatorioTrend()" 
+                                        :class="['flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all', viewType === 'financeiro' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-blue-600 border border-blue-200']">
+                                        FINANCEIRO
+                                    </button>
+                                    <button @click="viewType = 'consumo'; carregarRelatorioTrend()" 
+                                        :class="['flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all', viewType === 'consumo' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-blue-600 border border-blue-200']">
+                                        CONSUMO
+                                    </button>
                                 </div>
-
-                                <div>
-                                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-2 ml-1">Filtrar por Grupo Pai</label>
-                                    <select v-model="filtroCategoria" @change="carregarRelatorioTrend" 
-                                        class="w-full bg-gray-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                                        <option value="all">Todas as Despesas</option>
-                                        <option v-for="cat in categoriasDespesa" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-                                    </select>
-                                </div>
+                                <p class="text-[9px] text-blue-400 mt-2 leading-tight italic">
+                                    {{ viewType === 'financeiro' ? '* Gráfico pelo pagamento da fatura.' : '* Gráfico pelo dia real da compra.' }}
+                                </p>
                             </div>
 
-                            <div class="mt-8 pt-6 border-t border-gray-50 space-y-4">
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-2">Período</label>
+                            <select v-model="filtroMeses" @change="carregarRelatorioTrend" 
+                                class="w-full bg-gray-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option :value="3">Últimos 3 meses</option>
+                                <option :value="6">Últimos 6 meses</option>
+                                <option :value="12">Últimos 12 meses</option>
+                            </select>
+
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-2 mt-5">Grupo Pai</label>
+                            <select v-model="filtroCategoria" @change="carregarRelatorioTrend" 
+                                class="w-full bg-gray-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="all">Todas as Despesas</option>
+                                <option v-for="cat in categoriasDespesa" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                            </select>
+
+                            <div class="mt-8 space-y-4">
                                 <div class="p-3 bg-green-50 rounded-xl">
                                     <p class="text-[9px] text-green-700 font-bold uppercase">Média Receitas</p>
                                     <p class="text-sm font-black text-green-700">{{ formatarMoeda(mediaReceita) }}</p>
                                 </div>
                                 <div class="p-3 bg-red-50 rounded-xl">
-                                    <p class="text-[9px] text-red-700 font-bold uppercase">Média Despesas</p>
+                                    <p class="text-[9px] text-red-700 font-bold uppercase">
+                                        {{ filtroCategoria === 'all' ? 'Média Despesas' : 'Média Grupo' }}
+                                    </p>
                                     <p class="text-sm font-black text-red-700">{{ formatarMoeda(mediaDespesa) }}</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Gráfico Principal -->
+                    <!-- Área do Gráfico -->
                     <div class="md:col-span-3 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 min-h-[450px] flex flex-col">
                         <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Comportamento Mensal</h3>
-                            <div v-if="filtroCategoria !== 'all'" class="flex items-center gap-2 text-[10px] font-bold bg-blue-50 text-blue-600 px-3 py-1 rounded-full">
-                                <span class="icon-wrapper" v-html="getIcon('filter', 10)"></span>
-                                GRUPO: {{ nomeCategoriaSelecionada }}
-                            </div>
+                            <h3 class="text-sm font-bold text-gray-700 uppercase tracking-tight">Evolução Mensal ({{ viewType === 'financeiro' ? 'Financeiro' : 'Consumo' }})</h3>
+                            <span v-if="filtroCategoria !== 'all'" class="text-[10px] bg-blue-100 text-blue-600 px-2 py-1 rounded-full font-bold">
+                                Filtrado: {{ nomeCategoriaSelecionada }}
+                            </span>
                         </div>
-                        
                         <div class="flex-grow relative">
                             <canvas id="chartTrend"></canvas>
-                            <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 z-10">
+                            <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80">
                                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                             </div>
                             <div v-if="!loading && semDadosTrend" class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm italic">
-                                Sem dados suficientes para o período.
+                                Sem dados para o período selecionado.
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- ABA 2: BUSCA DETALHADA -->
+            <!-- ABA 2: BUSCA DETALHADA (RESTAURADA) -->
             <div v-else-if="abaAtual === 'busca'" key="aba-busca" class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                <!-- Mantida conforme a versão anterior do MyWallet3 -->
+                
+                <!-- Coluna de Filtros -->
                 <div class="lg:col-span-1 space-y-6">
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                         <h3 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
                             <span class="icon-wrapper" v-html="getIcon('filter', 16)"></span>
                             Filtros de Busca
                         </h3>
+                        
                         <div class="space-y-4">
                             <div>
                                 <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Início</label>
-                                <input type="date" v-model="formBusca.dataInicio" class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                <input type="date" v-model="formBusca.dataInicio" 
+                                    class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                             </div>
                             <div>
                                 <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Fim</label>
-                                <input type="date" v-model="formBusca.dataFim" class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                <input type="date" v-model="formBusca.dataFim" 
+                                    class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Tipo</label>
+                                <select v-model="formBusca.tipo" 
+                                    class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                    <option value="all">Todos os Lançamentos</option>
+                                    <option value="revenue">Apenas Receitas</option>
+                                    <option value="expense">Apenas Despesas</option>
+                                </select>
                             </div>
                             <div>
                                 <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Palavra-Chave</label>
-                                <input type="text" v-model="formBusca.termo" placeholder="Descrição, conta..." class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                <input type="text" v-model="formBusca.termo" placeholder="Descrição, conta..."
+                                    class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                             </div>
-                            <button @click="realizarBusca" :disabled="loadingBusca" class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition flex items-center justify-center gap-2">
+
+                            <button @click="realizarBusca" :disabled="loadingBusca"
+                                class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition flex items-center justify-center gap-2">
                                 <span v-if="loadingBusca" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
                                 <span v-else class="icon-wrapper" v-html="getIcon('search', 18)"></span>
                                 {{ loadingBusca ? 'Buscando...' : 'Filtrar Agora' }}
                             </button>
                         </div>
                     </div>
+
+                    <div v-if="resultadoBusca.itens.length > 0" class="bg-gray-800 p-6 rounded-2xl text-white">
+                        <p class="text-[10px] uppercase font-bold text-gray-400">Resultado do Período</p>
+                        <h2 class="text-2xl font-bold mt-1" :class="totalBusca >= 0 ? 'text-green-400' : 'text-red-400'">
+                            {{ formatarMoeda(totalBusca) }}
+                        </h2>
+                        <div class="mt-4 pt-4 border-t border-gray-700 flex justify-between text-xs">
+                            <span class="text-gray-400">{{ resultadoBusca.itens.length }} lançamentos</span>
+                        </div>
+                    </div>
                 </div>
 
+                <!-- Lista de Resultados -->
                 <div class="lg:col-span-3">
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
+                            <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Histórico Filtrado</span>
+                        </div>
+                        
                         <div class="max-h-[600px] overflow-y-auto custom-scroll">
-                            <div v-if="resultadoBusca.itens.length === 0" class="p-20 text-center text-gray-400 italic">
-                                Realize uma busca para ver os resultados.
+                            <div v-if="resultadoBusca.itens.length === 0 && !loadingBusca" class="p-20 text-center text-gray-400 italic">
+                                Realize uma busca para ver os resultados detalhados.
                             </div>
+
                             <ul v-else class="divide-y divide-gray-100">
-                                <li v-for="item in resultadoBusca.itens" :key="item.id" class="p-4 flex items-center justify-between hover:bg-gray-50 transition">
+                                <li v-for="item in resultadoBusca.itens" :key="item.id" 
+                                    class="p-4 flex items-center justify-between hover:bg-gray-50 transition group">
                                     <div class="flex items-center gap-4">
-                                        <div :class="['p-2 rounded-xl', item.type === 'revenue' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600']">
-                                            <span class="icon-wrapper" v-html="getIcon(item.type === 'revenue' ? 'trending-up' : 'trending-down', 20)"></span>
-                                        </div>
+                                        <div class="date-circle">{{ item.date.split('-')[2] }}</div>
                                         <div>
                                             <h4 class="font-bold text-gray-800 text-sm">{{ item.description }}</h4>
                                             <div class="flex items-center gap-2 text-[10px] text-gray-500 mt-1">
                                                 <span class="bg-gray-100 px-1.5 py-0.5 rounded">{{ item.category_name }}</span>
-                                                <span class="font-medium text-blue-600">{{ item.account_name }}</span>
-                                                <span>{{ formatarData(item.date) }}</span>
+                                                <span v-if="item.subgroup" class="italic">{{ item.subgroup }}</span>
+                                                <span class="font-medium text-blue-600 border-l pl-2 border-gray-200">{{ item.account_name }}</span>
+                                                <span class="border-l pl-2 border-gray-200">{{ formatarData(item.date) }}</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <p :class="['font-bold', item.type === 'revenue' ? 'text-green-600' : 'text-red-600']">
+                                    <p :class="['font-bold text-sm', item.type === 'revenue' ? 'text-green-600' : 'text-red-600']">
                                         {{ item.type === 'revenue' ? '+' : '-' }} {{ formatarMoeda(item.amount) }}
                                     </p>
                                 </li>
@@ -184,21 +239,19 @@
 
     <script>
         const { createApp, ref, onMounted, computed, watch, nextTick } = Vue;
-
         createApp({
             setup() {
-                const abaAtual = ref('tendencia'); 
+                const abaAtual = ref('tendencia');
+                const viewType = ref('financeiro');
                 const loading = ref(false);
                 const loadingBusca = ref(false);
                 const semDadosTrend = ref(false);
                 const filtroMeses = ref(6);
                 const filtroCategoria = ref('all');
                 const categoriasDespesa = ref([]);
-
-                // Gráfico
-                let chartTrendInstance = null;
                 const mediaReceita = ref(0);
                 const mediaDespesa = ref(0);
+                let chartInstance = null;
 
                 // Busca
                 const formBusca = ref({ dataInicio: '', dataFim: '', tipo: 'all', termo: '' });
@@ -223,117 +276,135 @@
                 const carregarRelatorioTrend = async () => {
                     loading.value = true;
                     semDadosTrend.value = false;
-                    
                     try {
-                        const params = new URLSearchParams({
-                            months: filtroMeses.value,
-                            categoryId: filtroCategoria.value
+                        const params = new URLSearchParams({ 
+                            months: filtroMeses.value, 
+                            categoryId: filtroCategoria.value, 
+                            viewType: viewType.value 
                         });
-
                         const res = await fetch(`http://localhost:3000/api/relatorios/trend?${params}`);
                         const data = await res.json();
 
                         if (!data || data.length === 0) {
                             semDadosTrend.value = true;
-                            if (chartTrendInstance) chartTrendInstance.destroy();
+                            if (chartInstance) chartInstance.destroy();
                             return;
                         }
 
                         // Cálculos de Média
-                        const totalR = data.reduce((acc, d) => acc + d.revenue, 0);
-                        const totalE = data.reduce((acc, d) => acc + d.expense, 0);
-                        mediaReceita.value = totalR / data.length;
-                        mediaDespesa.value = totalE / data.length;
+                        mediaReceita.value = data.reduce((acc, d) => acc + d.revenue, 0) / data.length;
+                        mediaDespesa.value = data.reduce((acc, d) => acc + d.expense, 0) / data.length;
 
                         await nextTick();
-                        const ctx = document.getElementById('chartTrend').getContext('2d');
-                        if (chartTrendInstance) chartTrendInstance.destroy();
+                        const canvas = document.getElementById('chartTrend');
+                        if (!canvas) return;
 
-                        chartTrendInstance = new Chart(ctx, {
+                        const ctx = canvas.getContext('2d');
+                        if (chartInstance) chartInstance.destroy();
+
+                        chartInstance = new Chart(ctx, {
                             type: 'line',
                             data: {
                                 labels: data.map(d => d.period),
                                 datasets: [
-                                    {
-                                        label: 'Receitas Totais',
-                                        data: data.map(d => d.revenue),
-                                        borderColor: '#10b981',
+                                    { 
+                                        label: 'Receitas Totais', 
+                                        data: data.map(d => d.revenue), 
+                                        borderColor: '#10b981', 
                                         backgroundColor: 'rgba(16, 185, 129, 0.1)',
                                         fill: true,
-                                        tension: 0.4,
-                                        pointRadius: 4
+                                        tension: 0.4 
                                     },
-                                    {
-                                        label: filtroCategoria.value === 'all' ? 'Despesas Totais' : `Despesas: ${nomeCategoriaSelecionada.value}`,
-                                        data: data.map(d => d.expense),
-                                        borderColor: '#ef4444',
+                                    { 
+                                        label: filtroCategoria.value === 'all' ? `Despesas (${viewType.value === 'financeiro' ? 'Financeiro' : 'Consumo'})` : `Grupo: ${nomeCategoriaSelecionada.value}`, 
+                                        data: data.map(d => d.expense), 
+                                        borderColor: '#ef4444', 
                                         backgroundColor: 'rgba(239, 68, 68, 0.1)',
                                         fill: true,
-                                        tension: 0.4,
-                                        pointRadius: 4
+                                        tension: 0.4 
                                     }
                                 ]
                             },
-                            options: {
-                                responsive: true,
+                            options: { 
+                                responsive: true, 
                                 maintainAspectRatio: false,
                                 plugins: {
-                                    legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11, weight: 'bold' } } },
+                                    legend: { position: 'top', labels: { usePointStyle: true, font: { weight: 'bold' } } },
                                     tooltip: { mode: 'index', intersect: false }
                                 },
                                 scales: {
-                                    y: { beginAtZero: true, grid: { color: '#f1f1f1' }, ticks: { font: { size: 10 }, callback: v => formatarMoeda(v) } },
-                                    x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                                    y: { beginAtZero: true, ticks: { callback: v => formatarMoeda(v) } }
                                 }
                             }
                         });
-
                     } catch (e) {
                         console.error("Erro Trend:", e);
                         semDadosTrend.value = true;
-                    } finally {
-                        loading.value = false;
-                        setTimeout(() => lucide.createIcons(), 100);
+                    } finally { 
+                        loading.value = false; 
+                        setTimeout(() => lucide.createIcons(), 50);
                     }
                 };
 
                 const realizarBusca = async () => {
                     loadingBusca.value = true;
                     try {
-                        const queryParams = new URLSearchParams({
-                            inicio: formBusca.value.dataInicio,
-                            fim: formBusca.value.dataFim
+                        const queryParams = new URLSearchParams({ 
+                            inicio: formBusca.value.dataInicio, 
+                            fim: formBusca.value.dataFim 
                         }).toString();
                         const res = await fetch(`http://localhost:3000/api/relatorios/search?${queryParams}`);
                         const todos = await res.json();
+
                         resultadoBusca.value.itens = todos.filter(item => {
+                            if (formBusca.value.tipo !== 'all' && item.type !== formBusca.value.tipo) return false;
                             if (formBusca.value.termo) {
                                 const t = formBusca.value.termo.toLowerCase();
-                                return item.description.toLowerCase().includes(t) || item.account_name.toLowerCase().includes(t);
+                                const desc = (item.description || '').toLowerCase();
+                                const cat = (item.category_name || '').toLowerCase();
+                                const sub = (item.subgroup || '').toLowerCase();
+                                const conta = (item.account_name || '').toLowerCase();
+                                return desc.includes(t) || cat.includes(t) || sub.includes(t) || conta.includes(t);
                             }
                             return true;
                         });
-                    } finally { loadingBusca.value = false; setTimeout(() => lucide.createIcons(), 100); }
+                    } catch (e) {
+                        console.error("Erro Busca:", e);
+                    } finally { 
+                        loadingBusca.value = false; 
+                        setTimeout(() => lucide.createIcons(), 50);
+                    }
                 };
+
+                const totalBusca = computed(() => {
+                    return resultadoBusca.value.itens.reduce((acc, item) => {
+                        const val = parseFloat(item.amount);
+                        return item.type === 'revenue' ? acc + val : acc - val;
+                    }, 0);
+                });
 
                 watch(abaAtual, (novaAba) => {
                     if (novaAba === 'tendencia') carregarRelatorioTrend();
+                    else setTimeout(() => lucide.createIcons(), 50);
                 });
 
-                onMounted(async () => {
-                    await carregarCategorias();
+                onMounted(() => { 
                     const hoje = new Date();
-                    formBusca.value.dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
-                    formBusca.value.dataFim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().split('T')[0];
-                    carregarRelatorioTrend();
+                    const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
+                    const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().split('T')[0];
+                    formBusca.value.dataInicio = primeiroDia;
+                    formBusca.value.dataFim = ultimoDia;
+
+                    carregarCategorias(); 
+                    carregarRelatorioTrend(); 
                     lucide.createIcons();
                 });
 
-                return {
-                    abaAtual, loading, filtroMeses, filtroCategoria, categoriasDespesa,
-                    mediaReceita, mediaDespesa, loadingBusca, formBusca, resultadoBusca,
-                    realizarBusca, carregarRelatorioTrend, nomeCategoriaSelecionada,
-                    semDadosTrend, getIcon, formatarMoeda, formatarData
+                return { 
+                    abaAtual, viewType, loading, filtroMeses, filtroCategoria, categoriasDespesa, 
+                    carregarRelatorioTrend, formatarMoeda, getIcon, mediaReceita, mediaDespesa,
+                    loadingBusca, formBusca, resultadoBusca, realizarBusca, totalBusca,
+                    formatarData, semDadosTrend, nomeCategoriaSelecionada
                 };
             }
         }).mount('#app');

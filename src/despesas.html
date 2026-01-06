@@ -280,7 +280,7 @@
                     setTimeout(() => lucide.createIcons(), 50);
                 };
 
-                // Subgrupos Disponíveis (CORRIGIDO: Acessa a propriedade .name se for objeto)
+                // Subgrupos Disponíveis
                 const subgruposDisponiveis = computed(() => {
                     if (!form.value.categoryId) return [];
                     const c = categorias.value.find(cat => cat.id == form.value.categoryId);
@@ -290,7 +290,6 @@
                         if (!Array.isArray(list)) return [];
                         
                         return list.map(item => {
-                            // Se o item for um objeto {name: '...'}, extrai o name. Se for string, usa o valor.
                             const nameValue = (typeof item === 'object' && item !== null) ? item.name : item;
                             return String(nameValue).replace(/[\[\]\"\' ]/g, '').trim();
                         });
@@ -312,7 +311,6 @@
                         grupos[cat].total += parseFloat(item.amount);
                     });
 
-                    // Ordenar grupos pelo total gasto e itens pelo dia (decrescente)
                     return Object.values(grupos).sort((a,b) => b.total - a.total).map(g => {
                         g.itens.sort((a,b) => obterDia(b.date) - obterDia(a.date));
                         return g;
@@ -332,11 +330,14 @@
                     }
                     loading.value = true;
                     try {
+                        // ADIÇÃO CRÍTICA: Enviamos a Data da Compra separada da Data de Vencimento
                         const payload = { 
                             ...form.value, 
                             date: form.value.isCredit ? form.value.dueDate : form.value.date, 
+                            purchaseDate: form.value.date, // <--- Aqui está o segredo para o novo gráfico
                             isInstallment: form.value.isCredit 
                         };
+                        
                         const res = await fetch('http://localhost:3000/api/despesas', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
