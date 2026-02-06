@@ -4,34 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyWallet3 - Relatórios</title>
+    
+    <!-- Bibliotecas Locais -->
     <script src="libs/tailwindcss.js"></script>
     <script src="libs/vue.global.js"></script>
     <script src="libs/chart.js"></script>
     <script src="libs/lucide.js"></script>
+
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f7fafc; }
         span.icon-wrapper { display: inline-flex; align-items: center; }
         .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
         .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .date-badge { background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
     </style>
 </head>
 <body class="p-6 text-gray-800">
 
     <div id="app" class="max-w-6xl mx-auto">
         
-        <div class="mb-8 border-b border-gray-200 pb-4 flex justify-between items-end">
-            <div>
-                <h1 class="text-3xl font-extrabold text-gray-800 tracking-tight">Relatórios de Gestão</h1>
-                <p class="text-sm text-gray-500 mt-1 italic">Análise de consumo e comportamento financeiro.</p>
-            </div>
+        <!-- Cabeçalho -->
+        <div class="mb-8 border-b border-gray-200 pb-4">
+            <h1 class="text-3xl font-extrabold text-gray-800 tracking-tight">Relatórios de Gestão</h1>
+            <p class="text-sm text-gray-500 mt-1 italic">Análise de consumo e auditoria de lançamentos.</p>
         </div>
 
-        <!-- Navegação -->
+        <!-- Navegação entre abas -->
         <div class="flex gap-4 mb-8 border-b border-gray-100">
             <button @click="abaAtual = 'tendencia'" :class="['pb-3 px-4 text-sm font-semibold transition-colors relative', abaAtual === 'tendencia' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600']">
-                Análise de Consumo
+                Evolução Mensal
                 <div v-if="abaAtual === 'tendencia'" class="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"></div>
             </button>
             <button @click="abaAtual = 'busca'" :class="['pb-3 px-4 text-sm font-semibold transition-colors relative', abaAtual === 'busca' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600']">
@@ -41,10 +45,10 @@
         </div>
 
         <transition name="fade" mode="out-in">
+            
+            <!-- ABA 1: EVOLUÇÃO MENSAL -->
             <div v-if="abaAtual === 'tendencia'" key="aba-tendencia" class="space-y-6">
-                
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <!-- Filtros -->
                     <div class="md:col-span-1 space-y-4">
                         <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                             <div class="mb-6 p-3 bg-blue-50 rounded-xl border border-blue-100">
@@ -61,30 +65,22 @@
                                 <input type="date" v-model="filtroDataFim" @change="carregarRelatorioTrend" class="w-full bg-gray-50 border-none rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                             </div>
 
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-2">Grupo</label>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-2">Grupo Pai</label>
                             <select v-model="filtroCategoria" @change="carregarRelatorioTrend" class="w-full bg-gray-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                                 <option value="all">Todas as Despesas</option>
                                 <option v-for="cat in categoriasDespesa" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
                             </select>
                         </div>
 
-                        <!-- Card de Soma Total -->
                         <div class="bg-gray-800 p-5 rounded-2xl shadow-sm text-white">
                             <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">Total no Período</p>
                             <h2 class="text-2xl font-black text-red-400">{{ formatarMoeda(resumo.totalExpense) }}</h2>
-                            <div class="mt-4 pt-4 border-t border-gray-700 space-y-2">
-                                <div class="flex justify-between text-[10px]">
-                                    <span class="text-gray-400">RECEITAS</span>
-                                    <span class="text-green-400 font-bold">{{ formatarMoeda(resumo.totalRevenue) }}</span>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
-                    <!-- Gráficos -->
                     <div class="md:col-span-3 space-y-6">
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 min-h-[400px] flex flex-col">
-                            <h3 class="text-sm font-bold text-gray-700 uppercase tracking-tight mb-6">Fluxo Temporal ({{ viewType.toUpperCase() }})</h3>
+                            <h3 class="text-sm font-bold text-gray-700 uppercase tracking-tight mb-6">Evolução Mensal ({{ viewType.toUpperCase() }})</h3>
                             <div class="flex-grow relative">
                                 <canvas id="chartTrend"></canvas>
                                 <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-white/80"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
@@ -93,7 +89,7 @@
 
                         <div v-if="dadosBreakdown.length > 0" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                             <div>
-                                <h3 class="text-sm font-bold text-gray-700 uppercase mb-4">{{ filtroCategoria === 'all' ? 'Distribuição por Categoria' : 'Distribuição por Subgrupo' }}</h3>
+                                <h3 class="text-sm font-bold text-gray-700 uppercase mb-4">{{ filtroCategoria === 'all' ? 'Gastos por Categoria' : 'Detalhamento de ' + nomeCategoriaSelecionada }}</h3>
                                 <div class="max-h-60 overflow-y-auto custom-scroll pr-2 space-y-2">
                                     <div v-for="(sub, idx) in dadosBreakdown" :key="idx" class="flex justify-between items-center text-xs border-b border-gray-50 pb-2">
                                         <span class="text-gray-600 font-medium">{{ sub.name }}</span>
@@ -107,26 +103,74 @@
                 </div>
             </div>
 
-            <!-- Busca Detalhada -->
+            <!-- ABA 2: BUSCA DETALHADA (RESTAURADA E FUNCIONAL) -->
             <div v-else-if="abaAtual === 'busca'" key="aba-busca" class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                
+                <!-- Coluna de Filtros -->
                 <div class="lg:col-span-1 space-y-6">
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <h3 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2"><span class="icon-wrapper" v-html="getIcon('search', 16)"></span> Filtros</h3>
+                        <h3 class="text-sm font-bold text-gray-700 mb-6 flex items-center gap-2">
+                            <span class="icon-wrapper" v-html="getIcon('search', 16)"></span> 
+                            Filtros de Busca
+                        </h3>
+                        
                         <div class="space-y-4">
-                            <div><label class="text-[10px] font-bold text-gray-400 uppercase">Início</label><input type="date" v-model="formBusca.dataInicio" class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm outline-none"></div>
-                            <div><label class="text-[10px] font-bold text-gray-400 uppercase">Fim</label><input type="date" v-model="formBusca.dataFim" class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm outline-none"></div>
-                            <div><label class="text-[10px] font-bold text-gray-400 uppercase">Busca</label><input type="text" v-model="formBusca.termo" placeholder="Descrição..." class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm outline-none"></div>
-                            <button @click="realizarBusca" class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm">Filtrar</button>
+                            <div>
+                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Início</label>
+                                <input type="date" v-model="formBusca.dataInicio" class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm outline-none">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Fim</label>
+                                <input type="date" v-model="formBusca.dataFim" class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm outline-none">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Tipo</label>
+                                <select v-model="formBusca.tipo" class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm outline-none">
+                                    <option value="all">Todos</option>
+                                    <option value="revenue">Receitas</option>
+                                    <option value="expense">Despesas</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Grupo Pai</label>
+                                <select v-model="formBusca.categoryId" class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm outline-none">
+                                    <option value="all">Todos os Grupos</option>
+                                    <option v-for="cat in categoriasDespesa" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Palavra-Chave</label>
+                                <input type="text" v-model="formBusca.termo" placeholder="Ex: mercado, luz..." class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm outline-none">
+                            </div>
+                            
+                            <button @click="realizarBusca" :disabled="loadingBusca" class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition">
+                                {{ loadingBusca ? 'A buscar...' : 'Filtrar Agora' }}
+                            </button>
                         </div>
                     </div>
+
+                    <!-- Card de Total da Busca -->
+                    <div v-if="resultadoBusca.itens.length > 0" class="bg-gray-800 p-6 rounded-2xl text-white shadow-lg">
+                        <p class="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Saldo do Resultado</p>
+                        <h2 class="text-2xl font-black mt-2" :class="totalBusca >= 0 ? 'text-green-400' : 'text-red-400'">
+                            {{ formatarMoeda(totalBusca) }}
+                        </h2>
+                        <p class="text-[9px] text-gray-500 mt-2">{{ resultadoBusca.itens.length }} lançamentos encontrados.</p>
+                    </div>
                 </div>
+                
                 <div class="lg:col-span-3">
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-4 bg-gray-50 border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Histórico Filtrado</div>
                         <ul class="divide-y divide-gray-100 max-h-[600px] overflow-y-auto custom-scroll">
-                            <li v-for="item in resultadoBusca.itens" :key="item.id" class="p-4 flex justify-between items-center">
+                            <li v-if="resultadoBusca.itens.length === 0 && !loadingBusca" class="p-20 text-center text-gray-400 italic text-sm">Nenhum resultado para os filtros aplicados.</li>
+                            <li v-for="item in resultadoBusca.itens" :key="item.id" class="p-4 flex justify-between items-center hover:bg-gray-50 transition">
                                 <div class="flex items-center gap-4">
-                                    <div class="bg-gray-50 p-2 rounded-lg text-[10px] font-bold text-gray-500">{{ item.date.split('-')[2] }}/{{ item.date.split('-')[1] }}</div>
-                                    <div><h4 class="font-bold text-gray-800 text-sm">{{ item.description }}</h4><p class="text-[10px] text-gray-400">{{ item.category_name }} • {{ item.account_name }}</p></div>
+                                    <div class="date-badge">{{ item.date.split('-')[2] }}/{{ item.date.split('-')[1] }}</div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800 text-sm">{{ item.description }}</h4>
+                                        <p class="text-[10px] text-gray-400">{{ item.category_name }} • {{ item.account_name }}</p>
+                                    </div>
                                 </div>
                                 <span :class="['font-bold text-sm', item.type === 'revenue' ? 'text-green-600' : 'text-red-600']">{{ formatarMoeda(item.amount) }}</span>
                             </li>
@@ -144,6 +188,7 @@
                 const abaAtual = ref('tendencia');
                 const viewType = ref('financeiro');
                 const loading = ref(false);
+                const loadingBusca = ref(false);
                 const filtroDataInicio = ref('');
                 const filtroDataFim = ref('');
                 const filtroCategoria = ref('all');
@@ -151,7 +196,8 @@
                 const resumo = ref({ totalExpense: 0, totalRevenue: 0 });
                 const dadosBreakdown = ref([]);
                 let chartTrend = null, chartBreakdown = null;
-                const formBusca = ref({ dataInicio: '', dataFim: '', termo: '' });
+
+                const formBusca = ref({ dataInicio: '', dataFim: '', tipo: 'all', categoryId: 'all', termo: '' });
                 const resultadoBusca = ref({ itens: [] });
 
                 const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
@@ -174,16 +220,17 @@
                 const renderizarTrend = (data) => {
                     const ctx = document.getElementById('chartTrend').getContext('2d');
                     if (chartTrend) chartTrend.destroy();
+                    const labels = [...new Set(data.map(d => d.period))].sort();
                     chartTrend = new Chart(ctx, {
                         type: 'line',
                         data: {
-                            labels: data.map(d => d.period),
+                            labels,
                             datasets: [
-                                { label: 'Receitas', data: data.map(d => d.type === 'revenue' ? d.total : null).filter(v => v !== null), borderColor: '#10b981', tension: 0.4, fill: false },
-                                { label: 'Despesas', data: data.map(d => d.type === 'expense' ? d.total : null).filter(v => v !== null), borderColor: '#ef4444', tension: 0.4, fill: false }
+                                { label: 'Receitas', data: labels.map(l => data.find(d => d.period === l && d.type === 'revenue')?.total || 0), borderColor: '#10b981', tension: 0.4 },
+                                { label: 'Despesas', data: labels.map(l => data.find(d => d.period === l && d.type === 'expense')?.total || 0), borderColor: '#ef4444', tension: 0.4 }
                             ]
                         },
-                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                        options: { responsive: true, maintainAspectRatio: false }
                     });
                 };
 
@@ -199,10 +246,29 @@
                 };
 
                 const realizarBusca = async () => {
-                    const res = await fetch(`http://localhost:3000/api/relatorios/search?inicio=${formBusca.value.dataInicio}&fim=${formBusca.value.dataFim}`);
-                    const itens = await res.json();
-                    resultadoBusca.value.itens = itens.filter(i => i.description.toLowerCase().includes(formBusca.value.termo.toLowerCase()));
+                    if (!formBusca.value.dataInicio || !formBusca.value.dataFim) return alert("Selecione o intervalo de datas.");
+                    loadingBusca.value = true;
+                    try {
+                        const q = new URLSearchParams({ 
+                            inicio: formBusca.value.dataInicio, 
+                            fim: formBusca.value.dataFim,
+                            type: formBusca.value.tipo,
+                            categoryId: formBusca.value.categoryId
+                        }).toString();
+                        const res = await fetch(`http://localhost:3000/api/relatorios/search?${q}`);
+                        const todos = await res.json();
+                        
+                        resultadoBusca.value.itens = todos.filter(item => {
+                            const t = formBusca.value.termo.toLowerCase();
+                            return (item.description || '').toLowerCase().includes(t) || 
+                                   (item.category_name || '').toLowerCase().includes(t) ||
+                                   (item.subgroup || '').toLowerCase().includes(t) ||
+                                   (item.account_name || '').toLowerCase().includes(t);
+                        });
+                    } finally { loadingBusca.value = false; setTimeout(() => lucide.createIcons(), 50); }
                 };
+
+                const totalBusca = computed(() => resultadoBusca.value.itens.reduce((acc, i) => i.type === 'revenue' ? acc + i.amount : acc - i.amount, 0));
 
                 onMounted(async () => {
                     const res = await fetch('http://localhost:3000/api/configuracoes?type=GrupoDespesa');
@@ -210,7 +276,7 @@
                     carregarRelatorioTrend();
                 });
 
-                return { abaAtual, viewType, loading, filtroDataInicio, filtroDataFim, filtroCategoria, categoriasDespesa, resumo, dadosBreakdown, carregarRelatorioTrend, formatarMoeda, getIcon, formBusca, resultadoBusca, realizarBusca };
+                return { abaAtual, viewType, loading, filtroDataInicio, filtroDataFim, filtroCategoria, categoriasDespesa, resumo, dadosBreakdown, carregarRelatorioTrend, formatarMoeda, getIcon, formBusca, resultadoBusca, realizarBusca, totalBusca, nomeCategoriaSelecionada: computed(() => categoriasDespesa.value.find(c => c.id == filtroCategoria.value)?.name || ''), loadingBusca };
             }
         }).mount('#app');
     </script>

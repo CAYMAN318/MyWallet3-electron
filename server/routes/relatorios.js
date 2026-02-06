@@ -7,27 +7,30 @@ const queryAll = (sql, params = []) => {
 };
 
 /**
- * Rota 1: Tendência e Resumo (Versão Corrigida)
+ * Rota Trend: Evolução e Detalhamento
+ * Suporta: viewType (financeiro/consumo), categoryId, startDate e endDate
  */
 router.get('/trend', (req, res) => {
     const { months, categoryId, viewType = 'financeiro', startDate, endDate } = req.query;
     
+    // Define qual coluna de data usar no SQL
     const dateColumn = viewType === 'consumo' ? 'purchase_date' : 'date';
-    let dataCorte;
+    
+    let dataInicio;
     let dataFim = endDate || '9999-12-31';
 
+    // Se o usuário não enviou data manual, calcula pelos meses (ex: últimos 6)
     if (startDate) {
-        dataCorte = startDate;
+        dataInicio = startDate;
     } else {
         const numMonths = parseInt(months) || 6;
         const today = new Date();
         const corte = new Date(today.getFullYear(), today.getMonth() - numMonths + 1, 1);
-        dataCorte = `${corte.getFullYear()}-${String(corte.getMonth()+1).padStart(2, '0')}-01`;
+        dataInicio = `${corte.getFullYear()}-${String(corte.getMonth()+1).padStart(2, '0')}-01`;
     }
 
     try {
-        // 1. Consulta para o Gráfico de Linhas (Evolução Mensal)
-        // Adicionamos a lógica para garantir que receitas e despesas venham corretamente no "All"
+        // 1. Dados para o Gráfico de Linhas (Evolução Mensal/Temporal)
         let sqlTrend = `
             SELECT 
                 strftime('%Y-%m', ${dateColumn}) as period, 
@@ -36,50 +39,42 @@ router.get('/trend', (req, res) => {
             FROM Transactions
             WHERE ${dateColumn} >= ? AND ${dateColumn} <= ?
         `;
-        let paramsTrend = [dataCorte, dataFim];
+        let paramsTrend = [dataInicio, dataFim];
 
         if (categoryId && categoryId !== 'all') {
-            // Filtra despesas da categoria mas mantém as receitas para comparação
+            // Se filtrar por categoria, mostramos a despesa dela e a receita total para base
             sqlTrend += ` AND (type = 'revenue' OR (type = 'expense' AND category_id = ?))`;
             paramsTrend.push(categoryId);
         }
-
-        sqlTrend += ` GROUP BY period, type ORDER BY period ASC;`;
+        sqlTrend += ` GROUP BY period, type ORDER BY period ASC`;
         const trendData = queryAll(sqlTrend, paramsTrend);
 
-        // 2. Detalhamento (Breakdown) e Totais
+        // 2. Dados para o Gráfico de Pizza (Breakdown)
         let breakdown = [];
-        let totalExpense = 0;
-        let totalRevenue = 0;
-
         if (categoryId && categoryId !== 'all') {
-            // Visão por Subgrupos dentro da categoria
+            // Se tem categoria, detalha por SUBGRUPOS
             const sqlBreakdown = `
                 SELECT IFNULL(subgroup, 'Sem Subgrupo') as name, SUM(amount) as value
                 FROM Transactions
                 WHERE ${dateColumn} BETWEEN ? AND ?
-                AND category_id = ?
-                AND type = 'expense'
-                GROUP BY subgroup
-                ORDER BY value DESC
+                AND category_id = ? AND type = 'expense'
+                GROUP BY subgroup ORDER BY value DESC
             `;
-            breakdown = queryAll(sqlBreakdown, [dataCorte, dataFim, categoryId]);
+            breakdown = queryAll(sqlBreakdown, [dataInicio, dataFim, categoryId]);
         } else {
-            // Visão por Categorias Pai (Quando selecionado "Todas")
+            // Se for "Todas", detalha por CATEGORIAS PAI
             const sqlBreakdownAll = `
                 SELECT c.name as name, SUM(t.amount) as value
                 FROM Transactions t
                 JOIN Categories c ON t.category_id = c.id
-                WHERE t.${dateColumn} BETWEEN ? AND ?
-                AND t.type = 'expense'
-                GROUP BY c.name
-                ORDER BY value DESC
+                WHERE t.${dateColumn} BETWEEN ? AND ? AND t.type = 'expense'
+                GROUP BY c.name ORDER BY value DESC
             `;
-            breakdown = queryAll(sqlBreakdownAll, [dataCorte, dataFim]);
+            breakdown = queryAll(sqlBreakdownAll, [dataInicio, dataFim]);
         }
 
-        // 3. Totais Absolutos do Período
-        const sqlTotals = `
+        // 3. Resumo Financeiro (Totais Absolutos)
+        const sqlSummary = `
             SELECT 
                 SUM(CASE WHEN type = 'revenue' THEN amount ELSE 0 END) as totalRev,
                 SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as totalExp
@@ -87,43 +82,56 @@ router.get('/trend', (req, res) => {
             WHERE ${dateColumn} BETWEEN ? AND ?
             ${categoryId && categoryId !== 'all' ? 'AND category_id = ?' : ''}
         `;
-        const totalParams = [dataCorte, dataFim];
-        if (categoryId && categoryId !== 'all') totalParams.push(categoryId);
-        
-        const totals = db.prepare(sqlTotals).get(totalParams);
-        totalRevenue = totals.totalRev || 0;
-        totalExpense = totals.totalExp || 0;
+        const summaryParams = [dataInicio, dataFim];
+        if (categoryId && categoryId !== 'all') summaryParams.push(categoryId);
+        const summary = db.prepare(sqlSummary).get(summaryParams);
 
         res.json({
             trend: trendData,
             breakdown: breakdown,
             summary: {
-                totalExpense,
-                totalRevenue,
-                balance: totalRevenue - totalExpense
+                totalExpense: summary.totalExp || 0,
+                totalRevenue: summary.totalRev || 0,
+                balance: (summary.totalRev || 0) - (summary.totalExp || 0)
             }
         });
+
     } catch (error) {
-        console.error("Erro na rota /trend:", error);
+        console.error("Erro Relatório Trend:", error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Rota 2: Busca Detalhada (Mantida)
+/**
+ * Rota 2: Busca Detalhada (Lista)
+ * Suporta agora filtragem por tipo e categoria diretamente no SQL para melhor performance
+ */
 router.get('/search', (req, res) => {
-    const { inicio, fim } = req.query;
-    if (!inicio || !fim) return res.status(400).json({ error: "Datas obrigatórias." });
+    const { inicio, fim, type, categoryId } = req.query;
     try {
-        const sql = `
+        let sql = `
             SELECT t.*, a.name as account_name, c.name as category_name 
             FROM Transactions t
             LEFT JOIN Accounts a ON t.account_id = a.id
             LEFT JOIN Categories c ON t.category_id = c.id
             WHERE t.date BETWEEN ? AND ?
-            ORDER BY t.date DESC
         `;
-        res.json(queryAll(sql, [inicio, fim]));
+        let params = [inicio, fim];
+
+        if (type && type !== 'all') {
+            sql += ` AND t.type = ?`;
+            params.push(type);
+        }
+
+        if (categoryId && categoryId !== 'all') {
+            sql += ` AND t.category_id = ?`;
+            params.push(categoryId);
+        }
+
+        sql += ` ORDER BY t.date DESC`;
+        res.json(queryAll(sql, params));
     } catch (error) {
+        console.error("Erro na busca detalhada:", error);
         res.status(500).json({ error: error.message });
     }
 });
