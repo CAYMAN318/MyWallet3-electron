@@ -4,237 +4,137 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyWallet3 - Relatórios</title>
-    
-    <!-- Bibliotecas Locais -->
     <script src="libs/tailwindcss.js"></script>
     <script src="libs/vue.global.js"></script>
     <script src="libs/chart.js"></script>
     <script src="libs/lucide.js"></script>
-
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f7fafc; }
         span.icon-wrapper { display: inline-flex; align-items: center; }
         .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
         .custom-scroll::-webkit-scrollbar { width: 5px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        
-        /* Círculo de Data para a listagem */
-        .date-circle {
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: #f1f5f9;
-            color: #475569;
-            border-radius: 9999px;
-            font-weight: 800;
-            font-size: 12px;
-            border: 1px solid #e2e8f0;
-            flex-shrink: 0;
-        }
     </style>
 </head>
 <body class="p-6 text-gray-800">
 
     <div id="app" class="max-w-6xl mx-auto">
         
-        <!-- Cabeçalho -->
-        <div class="mb-8 border-b border-gray-200 pb-4">
-            <h1 class="text-3xl font-extrabold text-gray-800">Relatórios Financeiros</h1>
-            <p class="text-sm text-gray-500 mt-1">Visão estratégica e análise de consumo.</p>
+        <div class="mb-8 border-b border-gray-200 pb-4 flex justify-between items-end">
+            <div>
+                <h1 class="text-3xl font-extrabold text-gray-800 tracking-tight">Relatórios de Gestão</h1>
+                <p class="text-sm text-gray-500 mt-1 italic">Análise de consumo e comportamento financeiro.</p>
+            </div>
         </div>
 
-        <!-- Navegação por Abas -->
+        <!-- Navegação -->
         <div class="flex gap-4 mb-8 border-b border-gray-100">
-            <button @click="abaAtual = 'tendencia'" 
-                :class="['pb-3 px-4 text-sm font-semibold transition-colors relative', abaAtual === 'tendencia' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600']">
-                Evolução Mensal
+            <button @click="abaAtual = 'tendencia'" :class="['pb-3 px-4 text-sm font-semibold transition-colors relative', abaAtual === 'tendencia' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600']">
+                Análise de Consumo
                 <div v-if="abaAtual === 'tendencia'" class="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"></div>
             </button>
-            <button @click="abaAtual = 'busca'" 
-                :class="['pb-3 px-4 text-sm font-semibold transition-colors relative', abaAtual === 'busca' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600']">
+            <button @click="abaAtual = 'busca'" :class="['pb-3 px-4 text-sm font-semibold transition-colors relative', abaAtual === 'busca' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600']">
                 Busca Detalhada
                 <div v-if="abaAtual === 'busca'" class="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"></div>
             </button>
         </div>
 
-        <!-- Conteúdo das Abas -->
         <transition name="fade" mode="out-in">
-            
-            <!-- ABA 1: TENDÊNCIA (GRÁFICO) -->
             <div v-if="abaAtual === 'tendencia'" key="aba-tendencia" class="space-y-6">
+                
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <!-- Filtros do Gráfico -->
+                    <!-- Filtros -->
                     <div class="md:col-span-1 space-y-4">
                         <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                            
-                            <!-- MODO DE ANÁLISE -->
                             <div class="mb-6 p-3 bg-blue-50 rounded-xl border border-blue-100">
                                 <label class="block text-[10px] font-bold text-blue-800 uppercase mb-2">Modo de Análise</label>
                                 <div class="flex gap-1">
-                                    <button @click="viewType = 'financeiro'; carregarRelatorioTrend()" 
-                                        :class="['flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all', viewType === 'financeiro' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-blue-600 border border-blue-200']">
-                                        FINANCEIRO
-                                    </button>
-                                    <button @click="viewType = 'consumo'; carregarRelatorioTrend()" 
-                                        :class="['flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all', viewType === 'consumo' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-blue-600 border border-blue-200']">
-                                        CONSUMO
-                                    </button>
+                                    <button @click="viewType = 'financeiro'; carregarRelatorioTrend()" :class="['flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all', viewType === 'financeiro' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-blue-600 border border-blue-200']">FINANCEIRO</button>
+                                    <button @click="viewType = 'consumo'; carregarRelatorioTrend()" :class="['flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all', viewType === 'consumo' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-blue-600 border border-blue-200']">CONSUMO</button>
                                 </div>
-                                <p class="text-[9px] text-blue-400 mt-2 leading-tight italic">
-                                    {{ viewType === 'financeiro' ? '* Gráfico pelo pagamento da fatura.' : '* Gráfico pelo dia real da compra.' }}
-                                </p>
                             </div>
 
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-2">Período</label>
-                            <select v-model="filtroMeses" @change="carregarRelatorioTrend" 
-                                class="w-full bg-gray-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                                <option :value="3">Últimos 3 meses</option>
-                                <option :value="6">Últimos 6 meses</option>
-                                <option :value="12">Últimos 12 meses</option>
-                            </select>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-2">Datas</label>
+                            <div class="space-y-2 mb-4">
+                                <input type="date" v-model="filtroDataInicio" @change="carregarRelatorioTrend" class="w-full bg-gray-50 border-none rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                                <input type="date" v-model="filtroDataFim" @change="carregarRelatorioTrend" class="w-full bg-gray-50 border-none rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                            </div>
 
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-2 mt-5">Grupo Pai</label>
-                            <select v-model="filtroCategoria" @change="carregarRelatorioTrend" 
-                                class="w-full bg-gray-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-2">Grupo</label>
+                            <select v-model="filtroCategoria" @change="carregarRelatorioTrend" class="w-full bg-gray-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                                 <option value="all">Todas as Despesas</option>
                                 <option v-for="cat in categoriasDespesa" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
                             </select>
+                        </div>
 
-                            <div class="mt-8 space-y-4">
-                                <div class="p-3 bg-green-50 rounded-xl">
-                                    <p class="text-[9px] text-green-700 font-bold uppercase">Média Receitas</p>
-                                    <p class="text-sm font-black text-green-700">{{ formatarMoeda(mediaReceita) }}</p>
-                                </div>
-                                <div class="p-3 bg-red-50 rounded-xl">
-                                    <p class="text-[9px] text-red-700 font-bold uppercase">
-                                        {{ filtroCategoria === 'all' ? 'Média Despesas' : 'Média Grupo' }}
-                                    </p>
-                                    <p class="text-sm font-black text-red-700">{{ formatarMoeda(mediaDespesa) }}</p>
+                        <!-- Card de Soma Total -->
+                        <div class="bg-gray-800 p-5 rounded-2xl shadow-sm text-white">
+                            <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">Total no Período</p>
+                            <h2 class="text-2xl font-black text-red-400">{{ formatarMoeda(resumo.totalExpense) }}</h2>
+                            <div class="mt-4 pt-4 border-t border-gray-700 space-y-2">
+                                <div class="flex justify-between text-[10px]">
+                                    <span class="text-gray-400">RECEITAS</span>
+                                    <span class="text-green-400 font-bold">{{ formatarMoeda(resumo.totalRevenue) }}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Área do Gráfico -->
-                    <div class="md:col-span-3 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 min-h-[450px] flex flex-col">
-                        <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-sm font-bold text-gray-700 uppercase tracking-tight">Evolução Mensal ({{ viewType === 'financeiro' ? 'Financeiro' : 'Consumo' }})</h3>
-                            <span v-if="filtroCategoria !== 'all'" class="text-[10px] bg-blue-100 text-blue-600 px-2 py-1 rounded-full font-bold">
-                                Filtrado: {{ nomeCategoriaSelecionada }}
-                            </span>
+                    <!-- Gráficos -->
+                    <div class="md:col-span-3 space-y-6">
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 min-h-[400px] flex flex-col">
+                            <h3 class="text-sm font-bold text-gray-700 uppercase tracking-tight mb-6">Fluxo Temporal ({{ viewType.toUpperCase() }})</h3>
+                            <div class="flex-grow relative">
+                                <canvas id="chartTrend"></canvas>
+                                <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-white/80"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
+                            </div>
                         </div>
-                        <div class="flex-grow relative">
-                            <canvas id="chartTrend"></canvas>
-                            <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80">
-                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+
+                        <div v-if="dadosBreakdown.length > 0" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                            <div>
+                                <h3 class="text-sm font-bold text-gray-700 uppercase mb-4">{{ filtroCategoria === 'all' ? 'Distribuição por Categoria' : 'Distribuição por Subgrupo' }}</h3>
+                                <div class="max-h-60 overflow-y-auto custom-scroll pr-2 space-y-2">
+                                    <div v-for="(sub, idx) in dadosBreakdown" :key="idx" class="flex justify-between items-center text-xs border-b border-gray-50 pb-2">
+                                        <span class="text-gray-600 font-medium">{{ sub.name }}</span>
+                                        <span class="font-bold text-gray-800">{{ formatarMoeda(sub.value) }}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div v-if="!loading && semDadosTrend" class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm italic">
-                                Sem dados para o período selecionado.
-                            </div>
+                            <div class="h-56 relative"><canvas id="chartBreakdown"></canvas></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- ABA 2: BUSCA DETALHADA (RESTAURADA) -->
+            <!-- Busca Detalhada -->
             <div v-else-if="abaAtual === 'busca'" key="aba-busca" class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                
-                <!-- Coluna de Filtros -->
                 <div class="lg:col-span-1 space-y-6">
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <h3 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-                            <span class="icon-wrapper" v-html="getIcon('filter', 16)"></span>
-                            Filtros de Busca
-                        </h3>
-                        
+                        <h3 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2"><span class="icon-wrapper" v-html="getIcon('search', 16)"></span> Filtros</h3>
                         <div class="space-y-4">
-                            <div>
-                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Início</label>
-                                <input type="date" v-model="formBusca.dataInicio" 
-                                    class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Fim</label>
-                                <input type="date" v-model="formBusca.dataFim" 
-                                    class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Tipo</label>
-                                <select v-model="formBusca.tipo" 
-                                    class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                                    <option value="all">Todos os Lançamentos</option>
-                                    <option value="revenue">Apenas Receitas</option>
-                                    <option value="expense">Apenas Despesas</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Palavra-Chave</label>
-                                <input type="text" v-model="formBusca.termo" placeholder="Descrição, conta..."
-                                    class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                            </div>
-
-                            <button @click="realizarBusca" :disabled="loadingBusca"
-                                class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition flex items-center justify-center gap-2">
-                                <span v-if="loadingBusca" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
-                                <span v-else class="icon-wrapper" v-html="getIcon('search', 18)"></span>
-                                {{ loadingBusca ? 'Buscando...' : 'Filtrar Agora' }}
-                            </button>
-                        </div>
-                    </div>
-
-                    <div v-if="resultadoBusca.itens.length > 0" class="bg-gray-800 p-6 rounded-2xl text-white">
-                        <p class="text-[10px] uppercase font-bold text-gray-400">Resultado do Período</p>
-                        <h2 class="text-2xl font-bold mt-1" :class="totalBusca >= 0 ? 'text-green-400' : 'text-red-400'">
-                            {{ formatarMoeda(totalBusca) }}
-                        </h2>
-                        <div class="mt-4 pt-4 border-t border-gray-700 flex justify-between text-xs">
-                            <span class="text-gray-400">{{ resultadoBusca.itens.length }} lançamentos</span>
+                            <div><label class="text-[10px] font-bold text-gray-400 uppercase">Início</label><input type="date" v-model="formBusca.dataInicio" class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm outline-none"></div>
+                            <div><label class="text-[10px] font-bold text-gray-400 uppercase">Fim</label><input type="date" v-model="formBusca.dataFim" class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm outline-none"></div>
+                            <div><label class="text-[10px] font-bold text-gray-400 uppercase">Busca</label><input type="text" v-model="formBusca.termo" placeholder="Descrição..." class="w-full mt-1 bg-gray-50 border-none rounded-xl p-2.5 text-sm outline-none"></div>
+                            <button @click="realizarBusca" class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm">Filtrar</button>
                         </div>
                     </div>
                 </div>
-
-                <!-- Lista de Resultados -->
                 <div class="lg:col-span-3">
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                        <div class="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
-                            <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Histórico Filtrado</span>
-                        </div>
-                        
-                        <div class="max-h-[600px] overflow-y-auto custom-scroll">
-                            <div v-if="resultadoBusca.itens.length === 0 && !loadingBusca" class="p-20 text-center text-gray-400 italic">
-                                Realize uma busca para ver os resultados detalhados.
-                            </div>
-
-                            <ul v-else class="divide-y divide-gray-100">
-                                <li v-for="item in resultadoBusca.itens" :key="item.id" 
-                                    class="p-4 flex items-center justify-between hover:bg-gray-50 transition group">
-                                    <div class="flex items-center gap-4">
-                                        <div class="date-circle">{{ item.date.split('-')[2] }}</div>
-                                        <div>
-                                            <h4 class="font-bold text-gray-800 text-sm">{{ item.description }}</h4>
-                                            <div class="flex items-center gap-2 text-[10px] text-gray-500 mt-1">
-                                                <span class="bg-gray-100 px-1.5 py-0.5 rounded">{{ item.category_name }}</span>
-                                                <span v-if="item.subgroup" class="italic">{{ item.subgroup }}</span>
-                                                <span class="font-medium text-blue-600 border-l pl-2 border-gray-200">{{ item.account_name }}</span>
-                                                <span class="border-l pl-2 border-gray-200">{{ formatarData(item.date) }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <p :class="['font-bold text-sm', item.type === 'revenue' ? 'text-green-600' : 'text-red-600']">
-                                        {{ item.type === 'revenue' ? '+' : '-' }} {{ formatarMoeda(item.amount) }}
-                                    </p>
-                                </li>
-                            </ul>
-                        </div>
+                        <ul class="divide-y divide-gray-100 max-h-[600px] overflow-y-auto custom-scroll">
+                            <li v-for="item in resultadoBusca.itens" :key="item.id" class="p-4 flex justify-between items-center">
+                                <div class="flex items-center gap-4">
+                                    <div class="bg-gray-50 p-2 rounded-lg text-[10px] font-bold text-gray-500">{{ item.date.split('-')[2] }}/{{ item.date.split('-')[1] }}</div>
+                                    <div><h4 class="font-bold text-gray-800 text-sm">{{ item.description }}</h4><p class="text-[10px] text-gray-400">{{ item.category_name }} • {{ item.account_name }}</p></div>
+                                </div>
+                                <span :class="['font-bold text-sm', item.type === 'revenue' ? 'text-green-600' : 'text-red-600']">{{ formatarMoeda(item.amount) }}</span>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
         </transition>
-
     </div>
 
     <script>
@@ -244,168 +144,73 @@
                 const abaAtual = ref('tendencia');
                 const viewType = ref('financeiro');
                 const loading = ref(false);
-                const loadingBusca = ref(false);
-                const semDadosTrend = ref(false);
-                const filtroMeses = ref(6);
+                const filtroDataInicio = ref('');
+                const filtroDataFim = ref('');
                 const filtroCategoria = ref('all');
                 const categoriasDespesa = ref([]);
-                const mediaReceita = ref(0);
-                const mediaDespesa = ref(0);
-                let chartInstance = null;
-
-                // Busca
-                const formBusca = ref({ dataInicio: '', dataFim: '', tipo: 'all', termo: '' });
+                const resumo = ref({ totalExpense: 0, totalRevenue: 0 });
+                const dadosBreakdown = ref([]);
+                let chartTrend = null, chartBreakdown = null;
+                const formBusca = ref({ dataInicio: '', dataFim: '', termo: '' });
                 const resultadoBusca = ref({ itens: [] });
 
-                const getIcon = (name, size = 18) => lucide.createIcons({ icons: { [name]: { size } } }) && lucide.icons[name] ? `<i data-lucide="${name}" style="width:${size}px;height:${size}px"></i>` : '';
                 const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
-                const formatarData = (d) => d ? d.split('-').reverse().join('/') : '';
-
-                const nomeCategoriaSelecionada = computed(() => {
-                    const cat = categoriasDespesa.value.find(c => c.id == filtroCategoria.value);
-                    return cat ? cat.name : '';
-                });
-
-                const carregarCategorias = async () => {
-                    try {
-                        const res = await fetch('http://localhost:3000/api/configuracoes?type=GrupoDespesa');
-                        categoriasDespesa.value = await res.json();
-                    } catch (e) { console.error("Erro categorias:", e); }
-                };
+                const getIcon = (name, size=18) => lucide.createIcons({ icons: { [name]: { size } } }) && lucide.icons[name] ? `<i data-lucide="${name}" style="width:${size}px;height:${size}px"></i>` : '';
 
                 const carregarRelatorioTrend = async () => {
                     loading.value = true;
-                    semDadosTrend.value = false;
                     try {
-                        const params = new URLSearchParams({ 
-                            months: filtroMeses.value, 
-                            categoryId: filtroCategoria.value, 
-                            viewType: viewType.value 
-                        });
+                        const params = new URLSearchParams({ months: 6, categoryId: filtroCategoria.value, viewType: viewType.value, startDate: filtroDataInicio.value, endDate: filtroDataFim.value });
                         const res = await fetch(`http://localhost:3000/api/relatorios/trend?${params}`);
                         const data = await res.json();
-
-                        if (!data || data.length === 0) {
-                            semDadosTrend.value = true;
-                            if (chartInstance) chartInstance.destroy();
-                            return;
-                        }
-
-                        // Cálculos de Média
-                        mediaReceita.value = data.reduce((acc, d) => acc + d.revenue, 0) / data.length;
-                        mediaDespesa.value = data.reduce((acc, d) => acc + d.expense, 0) / data.length;
-
+                        resumo.value = data.summary;
+                        dadosBreakdown.value = data.breakdown;
                         await nextTick();
-                        const canvas = document.getElementById('chartTrend');
-                        if (!canvas) return;
+                        renderizarTrend(data.trend);
+                        renderizarBreakdown(data.breakdown);
+                    } finally { loading.value = false; setTimeout(() => lucide.createIcons(), 50); }
+                };
 
-                        const ctx = canvas.getContext('2d');
-                        if (chartInstance) chartInstance.destroy();
+                const renderizarTrend = (data) => {
+                    const ctx = document.getElementById('chartTrend').getContext('2d');
+                    if (chartTrend) chartTrend.destroy();
+                    chartTrend = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: data.map(d => d.period),
+                            datasets: [
+                                { label: 'Receitas', data: data.map(d => d.type === 'revenue' ? d.total : null).filter(v => v !== null), borderColor: '#10b981', tension: 0.4, fill: false },
+                                { label: 'Despesas', data: data.map(d => d.type === 'expense' ? d.total : null).filter(v => v !== null), borderColor: '#ef4444', tension: 0.4, fill: false }
+                            ]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                    });
+                };
 
-                        chartInstance = new Chart(ctx, {
-                            type: 'line',
-                            data: {
-                                labels: data.map(d => d.period),
-                                datasets: [
-                                    { 
-                                        label: 'Receitas Totais', 
-                                        data: data.map(d => d.revenue), 
-                                        borderColor: '#10b981', 
-                                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                                        fill: true,
-                                        tension: 0.4 
-                                    },
-                                    { 
-                                        label: filtroCategoria.value === 'all' ? `Despesas (${viewType.value === 'financeiro' ? 'Financeiro' : 'Consumo'})` : `Grupo: ${nomeCategoriaSelecionada.value}`, 
-                                        data: data.map(d => d.expense), 
-                                        borderColor: '#ef4444', 
-                                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                                        fill: true,
-                                        tension: 0.4 
-                                    }
-                                ]
-                            },
-                            options: { 
-                                responsive: true, 
-                                maintainAspectRatio: false,
-                                plugins: {
-                                    legend: { position: 'top', labels: { usePointStyle: true, font: { weight: 'bold' } } },
-                                    tooltip: { mode: 'index', intersect: false }
-                                },
-                                scales: {
-                                    y: { beginAtZero: true, ticks: { callback: v => formatarMoeda(v) } }
-                                }
-                            }
-                        });
-                    } catch (e) {
-                        console.error("Erro Trend:", e);
-                        semDadosTrend.value = true;
-                    } finally { 
-                        loading.value = false; 
-                        setTimeout(() => lucide.createIcons(), 50);
-                    }
+                const renderizarBreakdown = (data) => {
+                    const ctx = document.getElementById('chartBreakdown')?.getContext('2d');
+                    if (!ctx) return;
+                    if (chartBreakdown) chartBreakdown.destroy();
+                    chartBreakdown = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: { labels: data.map(d => d.name), datasets: [{ data: data.map(d => d.value), backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'] }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                    });
                 };
 
                 const realizarBusca = async () => {
-                    loadingBusca.value = true;
-                    try {
-                        const queryParams = new URLSearchParams({ 
-                            inicio: formBusca.value.dataInicio, 
-                            fim: formBusca.value.dataFim 
-                        }).toString();
-                        const res = await fetch(`http://localhost:3000/api/relatorios/search?${queryParams}`);
-                        const todos = await res.json();
-
-                        resultadoBusca.value.itens = todos.filter(item => {
-                            if (formBusca.value.tipo !== 'all' && item.type !== formBusca.value.tipo) return false;
-                            if (formBusca.value.termo) {
-                                const t = formBusca.value.termo.toLowerCase();
-                                const desc = (item.description || '').toLowerCase();
-                                const cat = (item.category_name || '').toLowerCase();
-                                const sub = (item.subgroup || '').toLowerCase();
-                                const conta = (item.account_name || '').toLowerCase();
-                                return desc.includes(t) || cat.includes(t) || sub.includes(t) || conta.includes(t);
-                            }
-                            return true;
-                        });
-                    } catch (e) {
-                        console.error("Erro Busca:", e);
-                    } finally { 
-                        loadingBusca.value = false; 
-                        setTimeout(() => lucide.createIcons(), 50);
-                    }
+                    const res = await fetch(`http://localhost:3000/api/relatorios/search?inicio=${formBusca.value.dataInicio}&fim=${formBusca.value.dataFim}`);
+                    const itens = await res.json();
+                    resultadoBusca.value.itens = itens.filter(i => i.description.toLowerCase().includes(formBusca.value.termo.toLowerCase()));
                 };
 
-                const totalBusca = computed(() => {
-                    return resultadoBusca.value.itens.reduce((acc, item) => {
-                        const val = parseFloat(item.amount);
-                        return item.type === 'revenue' ? acc + val : acc - val;
-                    }, 0);
+                onMounted(async () => {
+                    const res = await fetch('http://localhost:3000/api/configuracoes?type=GrupoDespesa');
+                    categoriasDespesa.value = await res.json();
+                    carregarRelatorioTrend();
                 });
 
-                watch(abaAtual, (novaAba) => {
-                    if (novaAba === 'tendencia') carregarRelatorioTrend();
-                    else setTimeout(() => lucide.createIcons(), 50);
-                });
-
-                onMounted(() => { 
-                    const hoje = new Date();
-                    const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
-                    const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().split('T')[0];
-                    formBusca.value.dataInicio = primeiroDia;
-                    formBusca.value.dataFim = ultimoDia;
-
-                    carregarCategorias(); 
-                    carregarRelatorioTrend(); 
-                    lucide.createIcons();
-                });
-
-                return { 
-                    abaAtual, viewType, loading, filtroMeses, filtroCategoria, categoriasDespesa, 
-                    carregarRelatorioTrend, formatarMoeda, getIcon, mediaReceita, mediaDespesa,
-                    loadingBusca, formBusca, resultadoBusca, realizarBusca, totalBusca,
-                    formatarData, semDadosTrend, nomeCategoriaSelecionada
-                };
+                return { abaAtual, viewType, loading, filtroDataInicio, filtroDataFim, filtroCategoria, categoriasDespesa, resumo, dadosBreakdown, carregarRelatorioTrend, formatarMoeda, getIcon, formBusca, resultadoBusca, realizarBusca };
             }
         }).mount('#app');
     </script>

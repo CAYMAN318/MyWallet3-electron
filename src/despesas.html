@@ -10,27 +10,15 @@
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         span.icon-wrapper { display: inline-flex; align-items: center; }
-        .modal-overlay { background-color: rgba(0,0,0,0.6); backdrop-filter: blur(2px); }
+        .modal-overlay { background-color: rgba(0,0,0,0.6); backdrop-filter: blur(2px); z-index: 50; }
         
-        /* Estilo do Círculo de Data */
         .date-circle {
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: #fee2e2;
-            color: #b91c1c;
-            border-radius: 9999px;
-            font-weight: 800;
-            font-size: 13px;
-            border: 1px solid #fecaca;
-            flex-shrink: 0;
+            width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+            background-color: #fee2e2; color: #b91c1c; border-radius: 9999px;
+            font-weight: 800; font-size: 13px; border: 1px solid #fecaca; flex-shrink: 0;
         }
 
         input:focus, select:focus { border-color: #ef4444 !important; outline: none; box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2); }
-        
-        /* Ajuste de scroll */
         .custom-scroll::-webkit-scrollbar { width: 5px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
@@ -85,7 +73,6 @@
                     </select>
                 </div>
 
-                <!-- Lógica de Crédito/Parcelas -->
                 <div class="flex items-center gap-4 px-2 bg-red-50 rounded-xl border border-red-100 py-2">
                     <div class="flex items-center gap-2">
                         <input type="checkbox" v-model="form.isCredit" id="isCredit" class="w-4 h-4 accent-red-600 cursor-pointer">
@@ -120,15 +107,11 @@
                     <span class="icon-wrapper" v-html="getIcon('list', 18)"></span>
                     <h3 class="font-bold">Histórico de Despesas</h3>
                 </div>
-                
                 <div class="flex items-center gap-4">
-                    <!-- Total Geral -->
                     <div class="text-right">
                         <p class="text-[9px] uppercase font-bold text-gray-400 leading-none">Total do Mês</p>
                         <p class="text-xl font-black text-white">{{ formatarMoeda(totalGeralMes) }}</p>
                     </div>
-
-                    <!-- Navegação Meses -->
                     <div class="flex items-center gap-2 bg-white p-1 rounded-xl shadow-inner border border-gray-700">
                         <button @click="mudarMes(-1)" class="p-1.5 hover:bg-gray-100 rounded-lg text-gray-600"> 
                             <span class="icon-wrapper" v-html="getIcon('chevron-left', 18)"></span> 
@@ -146,7 +129,6 @@
             <div class="max-h-[600px] overflow-y-auto custom-scroll">
                 <table class="w-full text-left border-collapse">
                     <tbody v-for="grupo in despesasAgrupadas" :key="grupo.nome">
-                        <!-- Cabeçalho da Categoria -->
                         <tr class="bg-gray-50/80 border-y border-gray-100">
                             <td colspan="3" class="p-3 pl-6">
                                 <span class="font-black text-gray-700 uppercase tracking-widest text-[11px]">{{ grupo.nome }}</span>
@@ -157,11 +139,9 @@
                             </td>
                             <td></td>
                         </tr>
-
-                        <!-- Itens -->
                         <tr v-for="item in grupo.itens" :key="item.id" class="border-b border-gray-50 last:border-0 hover:bg-blue-50/20 transition group">
                             <td class="p-4 w-16">
-                                <div class="date-circle">{{ obterDia(item.date) }}</div>
+                                <div class="date-circle">{{ item.date.split('-')[2] }}</div>
                             </td>
                             <td class="p-4">
                                 <div class="font-bold text-gray-800 text-sm">{{ item.description }}</div>
@@ -176,9 +156,7 @@
                                 </div>
                             </td>
                             <td class="p-4">
-                                <div v-if="item.subgroup" class="text-[10px] font-medium text-gray-500 italic">
-                                    {{ item.subgroup }}
-                                </div>
+                                <div v-if="item.subgroup" class="text-[10px] font-medium text-gray-500 italic">{{ item.subgroup }}</div>
                             </td>
                             <td class="p-4 text-right">
                                 <span class="font-black text-red-600 text-sm">{{ formatarMoeda(item.amount) }}</span>
@@ -195,18 +173,13 @@
                             </td>
                         </tr>
                     </tbody>
-                    <tbody v-if="despesasAgrupadas.length === 0">
-                        <tr>
-                            <td colspan="5" class="p-20 text-center text-gray-400 italic">Nenhum lançamento encontrado para este mês.</td>
-                        </tr>
-                    </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Modal de Edição -->
-        <div v-if="modalEdicao.aberto" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
-            <div class="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
+        <!-- Modal de Edição (CORRIGIDO: V-Model e Z-Index) -->
+        <div v-if="modalEdicao.aberto" class="fixed inset-0 modal-overlay flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl relative">
                 <h3 class="text-lg font-bold mb-6 text-gray-800 border-b pb-4">Ajustar Lançamento</h3>
                 <div class="space-y-4">
                     <div>
@@ -218,7 +191,7 @@
                         <input type="number" v-model="modalEdicao.form.amount" class="w-full p-3 bg-gray-50 rounded-xl border">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Data</label>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Data (Vencimento)</label>
                         <input type="date" v-model="modalEdicao.form.date" class="w-full p-3 bg-gray-50 rounded-xl border">
                     </div>
                     <div>
@@ -230,7 +203,7 @@
                 </div>
                 <div class="flex gap-4 mt-8">
                     <button @click="modalEdicao.aberto = false" class="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-100 rounded-xl transition">Cancelar</button>
-                    <button @click="confirmarEdicao" class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-100">Salvar</button>
+                    <button @click="confirmarEdicao" class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-100">Salvar Alterações</button>
                 </div>
             </div>
         </div>
@@ -258,13 +231,7 @@
                 const modalEdicao = ref({ aberto: false, form: {} });
 
                 const getIcon = (name, size = 18) => `<i data-lucide="${name}" style="width:${size}px;height:${size}px"></i>`;
-                const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
-                
-                const obterDia = (d) => {
-                    if (!d) return '00';
-                    return d.includes('-') ? d.split('-')[2] : d.split('/')[0];
-                };
-
+                const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
                 const nomeMes = (m) => ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'][m-1];
 
                 const carregarConfigs = async () => {
@@ -280,104 +247,86 @@
                     setTimeout(() => lucide.createIcons(), 50);
                 };
 
-                // Subgrupos Disponíveis
                 const subgruposDisponiveis = computed(() => {
                     if (!form.value.categoryId) return [];
                     const c = categorias.value.find(cat => cat.id == form.value.categoryId);
                     if (!c || !c.subgroups) return [];
                     try {
                         let list = typeof c.subgroups === 'string' ? JSON.parse(c.subgroups) : c.subgroups;
-                        if (!Array.isArray(list)) return [];
-                        
-                        return list.map(item => {
-                            const nameValue = (typeof item === 'object' && item !== null) ? item.name : item;
-                            return String(nameValue).replace(/[\[\]\"\' ]/g, '').trim();
-                        });
+                        return Array.isArray(list) ? list.map(item => ((typeof item === 'object' && item !== null) ? item.name : item).replace(/[\[\]\"\' ]/g, '').trim()) : [];
                     } catch(e) { return []; }
                 });
 
-                // Agrupamento de Histórico por Categoria
                 const despesasAgrupadas = computed(() => {
                     const grupos = {};
                     const filtrado = historico.value.filter(item => {
                         const [y, m] = item.date.split('-');
                         return parseInt(y) === filtroData.value.ano && parseInt(m) === filtroData.value.mes;
                     });
-
                     filtrado.forEach(item => {
                         const cat = item.category_name || 'Diversos';
                         if (!grupos[cat]) grupos[cat] = { nome: cat, itens: [], total: 0 };
                         grupos[cat].itens.push(item);
                         grupos[cat].total += parseFloat(item.amount);
                     });
-
-                    return Object.values(grupos).sort((a,b) => b.total - a.total).map(g => {
-                        g.itens.sort((a,b) => obterDia(b.date) - obterDia(a.date));
-                        return g;
-                    });
+                    return Object.values(grupos).sort((a,b) => b.total - a.total);
                 });
 
-                const totalGeralMes = computed(() => {
-                    return despesasAgrupadas.value.reduce((acc, g) => acc + g.total, 0);
-                });
-
-                watch([filtroData, despesasAgrupadas], () => setTimeout(() => lucide.createIcons(), 50));
+                const totalGeralMes = computed(() => despesasAgrupadas.value.reduce((acc, g) => acc + g.total, 0));
 
                 const salvarDespesa = async () => {
-                    if(!form.value.description || !form.value.amount || !form.value.accountId || !form.value.categoryId) {
-                        alert("Por favor, preencha todos os campos obrigatórios.");
-                        return;
-                    }
+                    if(!form.value.description || !form.value.amount || !form.value.accountId) return alert("Preencha os campos!");
                     loading.value = true;
                     try {
-                        // ADIÇÃO CRÍTICA: Enviamos a Data da Compra separada da Data de Vencimento
                         const payload = { 
                             ...form.value, 
                             date: form.value.isCredit ? form.value.dueDate : form.value.date, 
-                            purchaseDate: form.value.date, // <--- Aqui está o segredo para o novo gráfico
+                            purchaseDate: form.value.date, 
                             isInstallment: form.value.isCredit 
                         };
-                        
                         const res = await fetch('http://localhost:3000/api/despesas', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
                         });
-                        if (res.ok) { 
-                            const d = form.value.date; const dd = form.value.dueDate;
-                            form.value = { 
-                                description: '', amount: '', date: d, dueDate: dd, 
-                                accountId: '', categoryId: '', subgroup: '', isCredit: false, numParcelas: 1 
-                            };
-                            await carregarHistorico(); 
-                        }
+                        if (res.ok) { carregarHistorico(); }
                     } finally { loading.value = false; }
                 };
 
+                // CORREÇÃO: Função abrirEdicao popula o formulário reativo
                 const abrirEdicao = (item) => { 
                     modalEdicao.value.form = { ...item }; 
                     modalEdicao.value.aberto = true; 
                     setTimeout(() => lucide.createIcons(), 50);
                 };
                 
+                // CORREÇÃO: Função confirmarEdicao envia mapeamento correto e purchaseDate
                 const confirmarEdicao = async () => {
                     const f = modalEdicao.value.form;
                     const res = await fetch(`http://localhost:3000/api/despesas/${f.id}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ ...f, accountId: f.account_id, categoryId: f.category_id })
+                        body: JSON.stringify({ 
+                            ...f, 
+                            accountId: f.account_id, 
+                            categoryId: f.category_id,
+                            purchaseDate: f.purchase_date || f.date // Mantém consistência no gráfico
+                        })
                     });
                     if (res.ok) { modalEdicao.value.aberto = false; await carregarHistorico(); }
+                    else { alert("Erro ao salvar alterações."); }
                 };
 
+                // CORREÇÃO: Função deletarItem com tratamento de resposta
                 const deletarItem = async (item) => {
                     let msg = "Excluir lançamento?";
-                    if (item.is_installment) msg = "Deseja excluir TODAS as parcelas deste grupo de crédito?";
+                    if (item.is_installment) msg = "Deseja excluir TODAS as parcelas deste grupo?";
                     if (!confirm(msg)) return;
                     
                     const url = `http://localhost:3000/api/despesas/${item.id}${item.is_installment ? '?groupId='+item.installment_group_id : ''}`;
-                    await fetch(url, { method: 'DELETE' });
-                    await carregarHistorico();
+                    const res = await fetch(url, { method: 'DELETE' });
+                    if (res.ok) { await carregarHistorico(); }
+                    else { alert("Erro ao excluir do banco de dados."); }
                 };
 
                 const mudarMes = (diff) => {
@@ -385,12 +334,7 @@
                     let na = filtroData.value.ano;
                     if (nm > 12) { nm = 1; na++; }
                     else if (nm < 1) { nm = 12; na--; }
-                    filtroData.value.mes = nm;
-                    filtroData.value.ano = na;
-                };
-
-                const aoMudarCategoria = () => {
-                    form.value.subgroup = '';
+                    filtroData.value.mes = nm; filtroData.value.ano = na;
                 };
 
                 onMounted(() => { carregarConfigs(); carregarHistorico(); });
@@ -398,7 +342,7 @@
                 return {
                     form, contas, categorias, loading, filtroData, despesasAgrupadas, totalGeralMes,
                     subgruposDisponiveis, mudarMes, salvarDespesa, deletarItem, getIcon, formatarMoeda, 
-                    obterDia, nomeMes, modalEdicao, abrirEdicao, confirmarEdicao, aoMudarCategoria
+                    nomeMes, modalEdicao, abrirEdicao, confirmarEdicao, aoMudarCategoria: () => form.value.subgroup = ''
                 };
             }
         }).mount('#app');
