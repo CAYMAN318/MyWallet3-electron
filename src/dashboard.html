@@ -17,6 +17,17 @@
         .card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
         /* Garante alinhamento dos ícones */
         span.icon-wrapper { display: inline-flex; align-items: center; }
+
+        /* Animação para itens pendentes na Matriz */
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        .animate-pulse-subtle { animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
 <body class="p-6 text-gray-800">
@@ -94,6 +105,45 @@
 
         </div>
 
+        <!-- Matriz de Compromissos (Checklist) -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-sm font-bold text-gray-700 uppercase tracking-widest flex items-center gap-2">
+                    <span class="icon-wrapper text-blue-600" v-html="getIcon('clipboard-check', 'w-5 h-5')"></span>
+                    Matriz de Compromissos ({{ nomeMesAtual }})
+                </h3>
+                <span class="text-[10px] font-black bg-blue-100 text-blue-600 px-3 py-1 rounded-full uppercase">
+                    {{ checklist.filter(i => i.status === 'pago').length }} de {{ checklist.length }} Lançados
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-80 overflow-y-auto custom-scroll pr-2">
+                <div v-for="item in checklist" :key="item.id" 
+                     class="flex items-center justify-between p-3 rounded-xl border transition-all"
+                     :class="item.status === 'pago' ? 'bg-emerald-50 border-emerald-100 shadow-sm' : 'bg-red-50 border-red-100 animate-pulse-subtle shadow-inner'">
+                    
+                    <div class="flex items-center gap-3">
+                        <div :class="item.status === 'pago' ? 'text-emerald-500' : 'text-red-500'">
+                            <span class="icon-wrapper" v-html="getIcon(item.status === 'pago' ? 'check-circle' : 'alert-circle', 'w-5 h-5')"></span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-800">{{ item.subgroup_name }}</p>
+                            <p class="text-[9px] text-gray-400 uppercase font-medium tracking-tight">{{ item.category_name }}</p>
+                        </div>
+                    </div>
+
+                    <div class="text-right">
+                        <p v-if="item.status === 'pago'" class="text-xs font-black text-emerald-700">{{ formatarMoeda(item.valor) }}</p>
+                        <p v-else class="text-[9px] font-bold text-red-600 uppercase tracking-tighter">Pendente</p>
+                    </div>
+                </div>
+                
+                <div v-if="checklist.length === 0" class="col-span-full p-10 text-center text-gray-400 italic text-sm">
+                    Nenhum item configurado na matriz. Vá em Configurações para marcar suas despesas fixas.
+                </div>
+            </div>
+        </div>
+
         <!-- Gráficos -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             
@@ -132,6 +182,7 @@
         createApp({
             setup() {
                 const loading = ref(false);
+                const checklist = ref([]);
                 const dados = ref({
                     saldoTotal: 0,
                     resumoMes: { receitas: 0, despesas: 0, saldo: 0 },
@@ -144,6 +195,11 @@
                 let chartCategoriasInstance = null;
 
                 const temDadosCategorias = computed(() => dados.value.graficoCategorias && dados.value.graficoCategorias.length > 0);
+
+                const nomeMesAtual = computed(() => {
+                    const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+                    return meses[new Date().getMonth()];
+                });
 
                 const formatarMoeda = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 
@@ -166,11 +222,25 @@
                         const data = await res.json();
                         dados.value = data;
                         
+                        await carregarChecklist(); // Carrega a matriz junto com os dados
                         renderizarGraficos();
                     } catch (error) {
                         console.error("Erro ao carregar dashboard:", error);
                     } finally {
                         loading.value = false;
+                    }
+                };
+
+                const carregarChecklist = async () => {
+                    try {
+                        const mes = new Date().getMonth() + 1;
+                        const ano = new Date().getFullYear();
+                        const res = await fetch(`http://localhost:3000/api/checklist/status?mes=${mes}&ano=${ano}`);
+                        if (res.ok) {
+                            checklist.value = await res.json();
+                        }
+                    } catch (e) {
+                        console.error("Erro ao carregar checklist:", e);
                     }
                 };
 
@@ -237,6 +307,8 @@
                 return {
                     loading,
                     dados,
+                    checklist,
+                    nomeMesAtual,
                     temDadosCategorias,
                     formatarMoeda,
                     carregarDados,

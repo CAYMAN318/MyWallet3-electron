@@ -30,7 +30,7 @@ console.log(">>> [DATABASE] Usando banco em:", dbPath);
 const dbInstance = new Database(dbPath);
 dbInstance.pragma('foreign_keys = ON');
 
-// --- MIGRAÇÃO E CORREÇÃO DE DATAS ---
+// --- MIGRAÇÃO E CORREÇÃO DE DATAS (MANTIDO) ---
 try {
     // 1. Criar coluna purchase_date se não existir
     const columns = dbInstance.prepare("PRAGMA table_info(Transactions)").all();
@@ -49,7 +49,6 @@ try {
             let d = row.date;
             let pd = row.purchase_date || row.date;
 
-            // Função interna para padronizar
             const fixDate = (dateStr) => {
                 if (!dateStr) return dateStr;
                 if (dateStr.includes('/')) {
@@ -66,10 +65,26 @@ try {
     })();
     console.log(">>> [DB] Datas sincronizadas e corrigidas.");
 } catch (e) {
-    console.error("Erro na migração:", e);
+    console.error("Erro na migração de datas:", e);
 }
 
-// Inicialização das Tabelas
+// --- NOVO: MIGRAÇÃO PARA A TABELA DE CHECKLIST (MATRIZ) ---
+try {
+    dbInstance.exec(`
+        CREATE TABLE IF NOT EXISTS Checklist (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category_id INTEGER NOT NULL,
+            subgroup_name TEXT NOT NULL,
+            FOREIGN KEY (category_id) REFERENCES Categories (id) ON DELETE CASCADE,
+            UNIQUE(category_id, subgroup_name)
+        );
+    `);
+    console.log(">>> [DB] Tabela Checklist (Matriz) verificada/criada.");
+} catch (e) {
+    console.error("Erro ao criar tabela Checklist:", e);
+}
+
+// Inicialização das Tabelas Base
 dbInstance.exec(`
     CREATE TABLE IF NOT EXISTS Accounts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

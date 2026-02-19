@@ -23,6 +23,7 @@ const configuracoesRoutes = require('./routes/configuracoes');
 const relatoriosRoutes = require('./routes/relatorios');
 const dashboardRoutes = require('./routes/dashboard');
 const systemRoutes = require('./routes/system'); 
+const checklistRoutes = require('./routes/checklist'); // NOVO: Rota para a Matriz de Compromissos
 
 app.use('/api/receitas', receitasRoutes);
 app.use('/api/despesas', despesasRoutes);
@@ -30,6 +31,7 @@ app.use('/api/configuracoes', configuracoesRoutes);
 app.use('/api/relatorios', relatoriosRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/system', systemRoutes); 
+app.use('/api/checklist', checklistRoutes); // NOVO: Registro da rota de Checklist
 
 // Fallback para SPA / Arquivos
 app.get('/', (req, res) => {
@@ -47,5 +49,11 @@ const startServer = (port = 3000) => {
     return serverInstance;
 };
 
-// --- IMPORTANTE: Exportação para o main.js do Electron ---
-module.exports = { startServer };
+const stopServer = () => {
+    if (serverInstance) {
+        serverInstance.close();
+        serverInstance = null;
+    }
+};
+
+module.exports = { startServer, stopServer };
