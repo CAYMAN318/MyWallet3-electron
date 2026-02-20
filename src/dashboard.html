@@ -105,7 +105,37 @@
 
         </div>
 
-        <!-- Matriz de Compromissos (Checklist) -->
+        <!-- Seção de Gráficos (Reposicionada para Cima) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            
+            <!-- Gráfico Histórico -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="icon-wrapper" v-html="getIcon('bar-chart-2', 'w-5 h-5 text-gray-400')"></span>
+                    Histórico & Projeção (6 Meses)
+                </h3>
+                <div class="relative h-64 w-full">
+                    <canvas id="chartHistorico"></canvas>
+                </div>
+            </div>
+
+            <!-- Gráfico Categorias -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="icon-wrapper" v-html="getIcon('pie-chart', 'w-5 h-5 text-gray-400')"></span>
+                    Despesas por Categoria (Mês Atual)
+                </h3>
+                <div class="relative h-64 w-full flex justify-center">
+                    <canvas id="chartCategorias"></canvas>
+                    <div v-if="!temDadosCategorias" class="absolute inset-0 flex items-center justify-center bg-white/80 text-gray-400 text-sm">
+                        Sem despesas neste mês
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Matriz de Compromissos (Checklist) - Reposicionada para Baixo -->
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-sm font-bold text-gray-700 uppercase tracking-widest flex items-center gap-2">
@@ -142,36 +172,6 @@
                     Nenhum item configurado na matriz. Vá em Configurações para marcar suas despesas fixas.
                 </div>
             </div>
-        </div>
-
-        <!-- Gráficos -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
-            <!-- Gráfico Histórico -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <span class="icon-wrapper" v-html="getIcon('bar-chart-2', 'w-5 h-5 text-gray-400')"></span>
-                    Histórico & Projeção (6 Meses)
-                </h3>
-                <div class="relative h-64 w-full">
-                    <canvas id="chartHistorico"></canvas>
-                </div>
-            </div>
-
-            <!-- Gráfico Categorias -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <span class="icon-wrapper" v-html="getIcon('pie-chart', 'w-5 h-5 text-gray-400')"></span>
-                    Despesas por Categoria (Mês Atual)
-                </h3>
-                <div class="relative h-64 w-full flex justify-center">
-                    <canvas id="chartCategorias"></canvas>
-                    <div v-if="!temDadosCategorias" class="absolute inset-0 flex items-center justify-center bg-white/80 text-gray-400 text-sm">
-                        Sem despesas neste mês
-                    </div>
-                </div>
-            </div>
-
         </div>
 
     </div>
