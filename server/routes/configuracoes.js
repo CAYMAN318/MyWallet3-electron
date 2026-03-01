@@ -2,203 +2,160 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database');
 
-// Função auxiliar para buscar todos os resultados (better-sqlite3)
-const queryAll = (sql, params = []) => {
-    return db.prepare(sql).all(params);
-};
+// Funções auxiliares para o better-sqlite3 (Síncrono)
+const queryAll = (sql, params = []) => db.prepare(sql).all(params);
+const runStatement = (sql, params = []) => db.prepare(sql).run(params);
 
-// Função auxiliar para executar comandos (INSERT, UPDATE, DELETE) (better-sqlite3)
-const runStatement = (sql, params = []) => {
-    return db.prepare(sql).run(params);
+/**
+ * FUNÇÃO DE AUTO-REPARO (MIGRAÇÃO DINÂMICA)
+ * Garante que o banco antigo (backup) ganhe as novas colunas sem travar o app.
+ */
+const garantirEsquemaAtualizado = () => {
+    try {
+        const info = db.prepare("PRAGMA table_info(Categories)").all();
+        const colunas = info.map(c => c.name);
+
+        if (!colunas.includes('subgroups')) {
+            console.log(">>> [MIGRAÇÃO] Adicionando coluna 'subgroups' em Categories...");
+            db.prepare("ALTER TABLE Categories ADD COLUMN subgroups TEXT DEFAULT ''").run();
+        }
+        if (!colunas.includes('color')) {
+            console.log(">>> [MIGRAÇÃO] Adicionando coluna 'color' em Categories...");
+            db.prepare("ALTER TABLE Categories ADD COLUMN color TEXT DEFAULT '#ef4444'").run();
+        }
+    } catch (e) {
+        console.error("Erro na migração dinâmica:", e.message);
+    }
 };
 
 /**
  * GET: BUSCAR LISTAS (Contas, GruposDespesa, GruposReceita)
+ * Versão robusta: Garante que colunas ausentes em bancos antigos não quebrem a rota.
  */
 router.get('/', (req, res) => {
     const { type } = req.query;
 
+    // Executa o auto-reparo antes de qualquer consulta
+    garantirEsquemaAtualizado();
+
     try {
-        let sql = '';
         let rows = [];
-
         if (type === 'Conta' || type === 'FormaPagamento') {
-            sql = "SELECT id, name, initial_balance, is_credit_card FROM Accounts ORDER BY name";
-            rows = queryAll(sql);
-
+            rows = queryAll("SELECT * FROM Accounts ORDER BY name");
         } else if (type === 'GrupoDespesa') {
-            // Incluindo a coluna 'color' que garantimos existir no database.js
-            sql = "SELECT id, name, subgroups, is_fixed, color FROM Categories WHERE type = 'expense' ORDER BY name";
-            rows = queryAll(sql);
-
+            rows = queryAll("SELECT * FROM Categories WHERE type = 'expense' ORDER BY name");
         } else if (type === 'GrupoReceita') {
-            sql = "SELECT id, name, is_fixed, color FROM Categories WHERE type = 'revenue' ORDER BY name";
-            rows = queryAll(sql); // Incluí 'color' também aqui por consistência
-
-        } else {
-            return res.status(400).json({ error: "Parâmetro 'type' inválido." });
+            rows = queryAll("SELECT * FROM Categories WHERE type = 'revenue' ORDER BY name");
         }
-
-        // Converte is_credit_card / is_fixed de INTEGER (0, 1) para Boolean
-        const finalRows = rows.map(row => {
-            return {
-                ...row,
-                is_credit_card: Boolean(row.is_credit_card),
-                is_fixed: Boolean(row.is_fixed),
-            };
-        });
-
-        res.json(finalRows);
-
-    } catch (err) {
-        console.error("Erro ao buscar configurações:", err.message);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-/**
- * POST: CRIAR CONTA OU CATEGORIA
- */
-router.post('/', (req, res) => {
-    const { type, name, initialBalance, isCreditCard, isFixed, subgroups, color } = req.body;
-
-    if (!name) return res.status(400).json({ error: "Nome é obrigatório" });
-
-    try {
-        let sql = '';
-        let params = [];
-        let result;
-
-        if (type === 'Conta') {
-            const isCredit = isCreditCard ? 1 : 0;
-            sql = "INSERT INTO Accounts (name, initial_balance, is_credit_card) VALUES (?, ?, ?)";
-            params = [name, initialBalance, isCredit];
-            result = runStatement(sql, params);
-            res.status(201).json({ id: result.lastInsertRowid, message: "Conta criada!" });
-
-        } else if (type === 'GrupoDespesa' || type === 'GrupoReceita') {
-            const isExpense = type === 'GrupoDespesa';
-            const catType = isExpense ? 'expense' : 'revenue';
-            const subs = subgroups && subgroups.length > 0 ? JSON.stringify(subgroups) : null;
-            const fixedInt = isFixed ? 1 : 0;
-            
-            // Inclui color no SQL e nos parâmetros (Usa default se não fornecido)
-            const colorValue = isExpense ? color || '#ef4444' : null;
-
-            sql = `INSERT INTO Categories (name, type, subgroups, is_fixed, color) VALUES (?, ?, ?, ?, ?)`;
-            params = [name, catType, subs, fixedInt, colorValue];
-            
-            result = runStatement(sql, params);
-            res.status(201).json({ id: result.lastInsertRowid, message: "Categoria criada!" });
-
-        } else {
-            return res.status(400).json({ error: "Tipo de configuração inválido." });
-        }
-
-    } catch (err) {
-        console.error("Erro ao criar item:", err.message);
-        // O better-sqlite3 retorna um erro SQLITE_CONSTRAINT com a mensagem
-        if (err.message.includes('UNIQUE constraint failed')) {
-            return res.status(400).json({ error: "Nome de item já existe." });
-        }
-        res.status(500).json({ error: err.message });
-    }
-});
-
-/**
- * PUT: ATUALIZAR CONTA OU CATEGORIA
- */
-router.put('/:type/:id', (req, res) => {
-    const { id, type } = req.params;
-    const { 
-        name, initialBalance, isCreditCard, 
-        isFixed, subgroups, color 
-    } = req.body;
-
-    try {
-        let sql = '';
-        let params = [];
         
+        // Normalização para garantir que o frontend não receba campos undefined
+        const normalizedRows = rows.map(row => ({
+            ...row,
+            subgroups: row.subgroups || '',
+            color: row.color || (row.type === 'revenue' ? '#6366f1' : '#ef4444'),
+            is_fixed: row.is_fixed || 0
+        }));
+
+        res.json(normalizedRows);
+    } catch (err) {
+        console.error(">>> [ERRO GET CONFIG]", err.message);
+        res.status(500).json({ error: "Erro ao carregar dados. O banco pode estar em um formato incompatível." });
+    }
+});
+
+/**
+ * POST: CRIAR NOVA CATEGORIA / CONTA
+ */
+router.post('/:type', (req, res) => {
+    const { type } = req.params; 
+    const data = req.body;
+
+    try {
         if (type === 'conta') {
-            const isCredit = isCreditCard ? 1 : 0;
-            sql = "UPDATE Accounts SET name = ?, initial_balance = ?, is_credit_card = ? WHERE id = ?";
-            params = [name, initialBalance, isCredit, id];
-
-        } else if (type === 'categoria') {
-            const fixedInt = isFixed ? 1 : 0;
-            const subs = subgroups && subgroups.length > 0 ? JSON.stringify(subgroups) : null;
-            
-            // Verifica a cor e usa o valor fornecido
-            const colorValue = color || '#ef4444'; 
-
-            sql = "UPDATE Categories SET name = ?, subgroups = ?, is_fixed = ?, color = ? WHERE id = ?";
-            params = [name, subs, fixedInt, colorValue, id];
-
-        } else {
-            return res.status(400).json({ error: "Tipo de atualização inválido." });
-        }
-
-        const result = runStatement(sql, params);
+            const sql = "INSERT INTO Accounts (name, initial_balance, is_credit_card) VALUES (?, ?, ?)";
+            const result = runStatement(sql, [
+                data.name, 
+                data.initial_balance || 0, 
+                data.is_credit_card ? 1 : 0
+            ]);
+            return res.status(201).json({ id: result.lastInsertRowid });
+        } 
         
-        if (result.changes === 0) {
-            return res.status(404).json({ error: "Item não encontrado ou nenhum dado alterado." });
+        if (type === 'categoria') {
+            const sql = "INSERT INTO Categories (name, type, is_fixed, subgroups, color) VALUES (?, ?, ?, ?, ?)";
+            const result = runStatement(sql, [
+                data.name, 
+                data.type, 
+                data.is_fixed ? 1 : 0, 
+                data.subgroups || '', 
+                data.color || '#ef4444'
+            ]);
+            return res.status(201).json({ id: result.lastInsertRowid });
         }
-        res.json({ message: `${type} atualizada com sucesso!` });
 
+        res.status(400).json({ error: "Tipo de cadastro inválido." });
     } catch (err) {
-        console.error(`Erro ao atualizar ${type}:`, err.message);
-        if (err.message.includes('UNIQUE constraint failed')) {
-            return res.status(400).json({ error: "Nome de item já existe." });
-        }
+        console.error("Erro no POST configuracoes:", err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
+/**
+ * PUT: ATUALIZAR CATEGORIA / CONTA
+ */
+router.put('/:type', (req, res) => {
+    const { type } = req.params;
+    const data = req.body;
+
+    try {
+        if (type === 'conta') {
+            const sql = "UPDATE Accounts SET name = ?, initial_balance = ?, is_credit_card = ? WHERE id = ?";
+            runStatement(sql, [data.name, data.initial_balance, data.is_credit_card ? 1 : 0, data.id]);
+            return res.json({ message: "Conta atualizada!" });
+        }
+
+        if (type === 'categoria') {
+            const sql = "UPDATE Categories SET name = ?, type = ?, is_fixed = ?, subgroups = ?, color = ? WHERE id = ?";
+            runStatement(sql, [
+                data.name, 
+                data.type, 
+                data.is_fixed ? 1 : 0, 
+                data.subgroups || '', 
+                data.color, 
+                data.id
+            ]);
+            return res.json({ message: "Categoria atualizada!" });
+        }
+
+        res.status(400).json({ error: "Tipo de atualização inválido." });
+    } catch (err) {
+        console.error("Erro no PUT configuracoes:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
 
 /**
- * DELETE: EXCLUIR CONTA OU CATEGORIA
+ * DELETE: EXCLUIR ITEM
  */
 router.delete('/:type/:id', (req, res) => {
-    const { id, type } = req.params;
+    const { type, id } = req.params;
 
     try {
-        // Checagem de integridade: Verifica se há transações vinculadas
-        if (type === 'categoria') {
-            const checkSql = "SELECT COUNT(*) as count FROM Transactions WHERE category_id = ?";
-            const checkResult = queryAll(checkSql, [id]);
-            if (checkResult[0].count > 0) {
-                return res.status(400).json({ error: `Não é possível excluir: ${checkResult[0].count} lançamentos vinculados.` });
-            }
-        } else if (type === 'conta') {
-            const checkSql = "SELECT COUNT(*) as count FROM Transactions WHERE account_id = ?";
-            const checkResult = queryAll(checkSql, [id]);
-            if (checkResult[0].count > 0) {
-                return res.status(400).json({ error: `Não é possível excluir: ${checkResult[0].count} lançamentos vinculados.` });
-            }
-        } else {
-            return res.status(400).json({ error: "Tipo de exclusão inválido." });
+        const checkTable = type === 'conta' ? 'account_id' : 'category_id';
+        const count = db.prepare(`SELECT COUNT(*) as total FROM Transactions WHERE ${checkTable} = ?`).get(id).total;
+        
+        if (count > 0) {
+            return res.status(400).json({ 
+                error: `Existem ${count} lançamentos vinculados a este item. Exclua os lançamentos primeiro.` 
+            });
         }
 
-        // Exclusão
-        let deleteSql = '';
-        if (type === 'categoria') {
-            deleteSql = "DELETE FROM Categories WHERE id = ?";
-        } else if (type === 'conta') {
-            deleteSql = "DELETE FROM Accounts WHERE id = ?";
-        }
-
-        const result = runStatement(deleteSql, [id]);
-
-        if (result.changes === 0) {
-            return res.status(404).json({ error: `${type} não encontrada.` });
-        }
-        res.json({ message: `${type} excluída!` });
-
+        const sql = type === 'conta' ? "DELETE FROM Accounts WHERE id = ?" : "DELETE FROM Categories WHERE id = ?";
+        runStatement(sql, [id]);
+        res.json({ message: "Item removido com sucesso!" });
     } catch (err) {
-        console.error(`Erro ao excluir ${type}:`, err.message);
-        res.status(500).json({ error: `Erro interno ao excluir ${type}.` });
+        res.status(500).json({ error: err.message });
     }
 });
-
 
 module.exports = router;

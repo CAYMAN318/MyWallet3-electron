@@ -11,3 +11,11 @@ bd_gestor_financeiro.db-wal
 .env
 .DS_Store
 Thumbs.db
+
+*.db
+*.db-shm
+*.db-wal
+
+.env
+.DS_Store
+Thumbs.db

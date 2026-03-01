@@ -7,8 +7,8 @@ let expressServerInstance = null;
 function createWindow() {
     // Cria a janela principal do Electron
     const mainWindow = new BrowserWindow({
-        width: 1200,
-        height: 768,
+        width: 1280,
+        height: 800,
         minWidth: 1000,
         minHeight: 700,
         title: "MyWallet3 - Gerenciador Financeiro Pessoal",
@@ -20,10 +20,13 @@ function createWindow() {
         }
     });
 
-    // Remove o menu padrão (Arquivo, Editar, etc) para ficar mais profissional
+    // Remove o menu padrão (Arquivo, Editar, etc) para um visual de App nativo
     mainWindow.setMenuBarVisibility(false);
 
-    // Carrega o frontend
+    // COMANDO COMENTADO PARA PRODUÇÃO:
+    //mainWindow.webContents.openDevTools();
+
+    // Carrega o frontend principal
     mainWindow.loadFile(path.join(__dirname, 'src', 'index.html'));
 }
 
@@ -43,11 +46,9 @@ app.on('window-all-closed', () => {
     }
 });
 
-// Encerra a instância do servidor Express ao fechar o aplicativo
+// Encerra a instância do servidor Express ao fechar o aplicativo para liberar a porta 3000
 app.on('quit', () => {
-    if (expressServerInstance) {
-        expressServerInstance.close(() => {
-            console.log("Servidor Express encerrado corretamente.");
-        });
+    if (expressServerInstance && expressServerInstance.close) {
+        expressServerInstance.close();
     }
 });
