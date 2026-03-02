@@ -24,7 +24,7 @@ function createWindow() {
     mainWindow.setMenuBarVisibility(false);
 
     // COMANDO COMENTADO PARA PRODUÇÃO:
-    //mainWindow.webContents.openDevTools();
+    mainWindow.webContents.openDevTools();
 
     // Carrega o frontend principal
     mainWindow.loadFile(path.join(__dirname, 'src', 'index.html'));
