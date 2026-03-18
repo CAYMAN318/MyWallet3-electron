@@ -28,7 +28,7 @@ router.get('/', (req, res) => {
 });
 
 /**
- * POST: Criar despesa (Lógica de Negócio Pura)
+ * POST: Criar despesa (Lógica de Negócio Pura e Parcelamento)
  */
 router.post('/', (req, res) => {
     const { 
@@ -82,6 +82,40 @@ router.post('/', (req, res) => {
     }
 });
 
+/**
+ * PUT: Atualizar despesa existente (Editar Lançamento)
+ */
+router.put('/:id', (req, res) => {
+    const { id } = req.params;
+    const { description, amount, date, account_id, category_id, subgroup } = req.body;
+
+    try {
+        const stmt = db.prepare(`
+            UPDATE Transactions 
+            SET description = ?, amount = ?, date = ?, 
+                account_id = ?, category_id = ?, subgroup = ?
+            WHERE id = ? AND type = 'expense'
+        `);
+        
+        stmt.run(
+            description, 
+            amount, 
+            date, 
+            account_id, 
+            category_id || null, 
+            subgroup || '', 
+            id
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Erro ao atualizar despesa:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * DELETE: Remover despesa
+ */
 router.delete('/:id', (req, res) => {
     try {
         db.prepare("DELETE FROM Transactions WHERE id = ?").run(req.params.id);

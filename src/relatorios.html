@@ -65,7 +65,8 @@
 
                 <div class="md:col-span-2 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
                     <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Filtrar por Grupo Pai</label>
-                    <select v-model="filtroCategoria" @change="carregarRelatorioTrend" class="w-full bg-transparent font-bold text-gray-700 focus:outline-none">
+                    <!-- Trocado o @change para a nova função onCategoriaChange -->
+                    <select v-model="filtroCategoria" @change="onCategoriaChange" class="w-full bg-transparent font-bold text-gray-700 focus:outline-none">
                         <option value="all">Todas as Despesas (+ Receitas)</option>
                         <option v-for="cat in categoriasFiltro" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
                     </select>
@@ -87,10 +88,21 @@
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-2 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                    <!-- CABEÇALHO DO GRÁFICO COM OPÇÃO DE RECEITAS -->
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="font-bold text-gray-800">Evolução de {{ viewType === 'consumo' ? 'Consumo' : 'Pagamentos' }}</h3>
-                        <div v-if="loading" class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                        
+                        <div class="flex items-center gap-4">
+                            <!-- Toggle que aparece só quando uma categoria específica é selecionada -->
+                            <label v-if="filtroCategoria !== 'all'" class="flex items-center gap-2 cursor-pointer text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors">
+                                <input type="checkbox" v-model="mostrarReceitas" @change="renderizarChartTrend" class="w-3.5 h-3.5 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                                Incluir Receitas
+                            </label>
+                            
+                            <div v-if="loading" class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                        </div>
                     </div>
+                    
                     <div class="relative h-[400px] w-full">
                         <div v-if="semDadosTrend" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
                             <i data-lucide="bar-chart-2" class="w-12 h-12 mb-2 opacity-20"></i>
@@ -124,7 +136,7 @@
             </div>
         </div>
 
-        <!-- CONTEÚDO: BUSCA DETALHADA (Busca Global Simplificada com Destaque no Saldo) -->
+        <!-- CONTEÚDO: BUSCA DETALHADA -->
         <div v-if="abaAtual === 'busca'" class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
             <div class="p-6 border-b border-gray-100 bg-gray-50/50">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -213,6 +225,10 @@
                 const viewType = ref('financeiro');
                 const filtroMeses = ref(6);
                 const filtroCategoria = ref('all');
+                
+                // Variável de controle para exibir ou ocultar receitas no gráfico
+                const mostrarReceitas = ref(true);
+
                 const loading = ref(false);
                 const trendData = ref([]);
                 const categoriasFiltro = ref([]);
@@ -229,6 +245,16 @@
                 const carregarConfigs = async () => {
                     const resG = await fetch('http://localhost:3000/api/configuracoes?type=GrupoDespesa');
                     categoriasFiltro.value = await resG.json();
+                };
+
+                // Lógica ao trocar categoria: Esconde receita por padrão para categorias específicas
+                const onCategoriaChange = () => {
+                    if (filtroCategoria.value !== 'all') {
+                        mostrarReceitas.value = false; // Oculta receita para dar foco à despesa
+                    } else {
+                        mostrarReceitas.value = true;  // Volta ao normal na visão geral
+                    }
+                    carregarRelatorioTrend();
                 };
 
                 const carregarRelatorioTrend = async () => {
@@ -252,21 +278,67 @@
                     const ctx = canvas.getContext('2d');
                     if (chartTrendInstance) chartTrendInstance.destroy();
 
+                    // Define se o gráfico será em linha (categoria específica isolada) ou barras (comparativo)
+                    const isSpecificCategory = filtroCategoria.value !== 'all';
+                    const usarLinha = isSpecificCategory && !mostrarReceitas.value;
+                    const chartType = usarLinha ? 'line' : 'bar';
+
+                    const datasets = [];
+
+                    // Adiciona o dataset de Receita apenas se o toggle estiver ativo
+                    if (mostrarReceitas.value) {
+                        datasets.push({ 
+                            label: 'Receitas', 
+                            data: trendData.value.map(d => d.revenue), 
+                            backgroundColor: '#3b82f6', 
+                            borderRadius: 8 
+                        });
+                    }
+
+                    // Configura o dataset de Despesas (Linha preenchida ou Barras vermelhas)
+                    datasets.push({ 
+                        label: isSpecificCategory ? 'Despesas (Grupo)' : 'Despesas', 
+                        data: trendData.value.map(d => d.expense), 
+                        backgroundColor: usarLinha ? 'rgba(239, 68, 68, 0.15)' : '#ef4444', 
+                        borderColor: '#ef4444',
+                        borderWidth: usarLinha ? 3 : 0,
+                        borderRadius: usarLinha ? 0 : 8,
+                        fill: usarLinha, // Preenche a área abaixo da linha
+                        tension: 0.4,    // Suaviza as curvas da linha
+                        pointBackgroundColor: '#ef4444',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: usarLinha ? 5 : 0,
+                        pointHoverRadius: usarLinha ? 7 : 0
+                    });
+
                     chartTrendInstance = new Chart(ctx, {
-                        type: 'bar',
+                        type: chartType,
                         data: {
                             labels: trendData.value.map(d => d.period),
-                            datasets: [
-                                { label: 'Receitas', data: trendData.value.map(d => d.revenue), backgroundColor: '#3b82f6', borderRadius: 8 },
-                                { label: 'Despesas', data: trendData.value.map(d => d.expense), backgroundColor: '#ef4444', borderRadius: 8 }
-                            ]
+                            datasets: datasets
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            plugins: { legend: { position: 'bottom' } },
+                            plugins: { 
+                                legend: { position: 'bottom' },
+                                tooltip: {
+                                    mode: 'index',
+                                    intersect: false
+                                }
+                            },
+                            interaction: {
+                                mode: 'nearest',
+                                axis: 'x',
+                                intersect: false
+                            },
                             scales: { 
-                                y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { callback: v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }) } },
+                                y: { 
+                                    beginAtZero: true, 
+                                    grid: { color: '#f1f5f9' }, 
+                                    ticks: { callback: v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }) } 
+                                },
                                 x: { grid: { display: false } }
                             }
                         }
@@ -332,7 +404,7 @@
                     abaAtual, viewType, loading, filtroMeses, filtroCategoria, categoriasFiltro,
                     datasTrend, carregarRelatorioTrend, formatarMoeda, mediaReceita, mediaDespesa,
                     loadingBusca, formBusca, resultadoBusca, realizarBusca, totalBusca,
-                    formatarData, semDadosTrend
+                    formatarData, semDadosTrend, mostrarReceitas, renderizarChartTrend, onCategoriaChange
                 };
             }
         }).mount('#app');

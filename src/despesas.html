@@ -96,7 +96,7 @@
         <div class="premium-card p-10 mb-10">
             <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
                 
-                <!-- Linha 1: Sem Vencimento (como pedido) -->
+                <!-- Linha 1: Sem Vencimento -->
                 <div class="md:col-span-8 input-group">
                     <label>Descrição da Despesa</label>
                     <input v-model="form.description" type="text" class="premium-input" placeholder="O que você comprou?">
@@ -211,8 +211,14 @@
                                     </div>
                                 </td>
                                 <td class="p-8 text-right font-black text-slate-700 text-sm w-40">{{ formatarMoeda(d.amount) }}</td>
-                                <td class="p-8 text-right w-20">
-                                    <button @click="excluirDespesa(d.id)" class="p-2 text-slate-200 hover:text-rose-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                <!-- Coluna de Ações com Caneta e Lixeira -->
+                                <td class="p-8 text-right w-28 whitespace-nowrap">
+                                    <button @click="abrirEdicao(d)" class="p-2 text-slate-300 hover:text-indigo-600 transition-all mr-1" title="Editar">
+                                        <i data-lucide="edit-2" class="w-4 h-4"></i>
+                                    </button>
+                                    <button @click="excluirDespesa(d.id)" class="p-2 text-slate-300 hover:text-rose-500 transition-all" title="Excluir">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
                                 </td>
                             </tr>
                         </tbody>
@@ -220,6 +226,72 @@
                 </div>
             </div>
         </div>
+
+        <!-- MODAL DE EDIÇÃO -->
+        <transition name="fade-slide">
+            <div v-if="modalEdit.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                <div class="bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col border border-slate-100">
+                    <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <div>
+                            <h3 class="font-black text-slate-900 uppercase tracking-tighter text-xl leading-none">Editar Lançamento</h3>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase mt-2 tracking-widest">Ajuste os dados da despesa</p>
+                        </div>
+                        <button @click="fecharEdicao" class="w-10 h-10 flex items-center justify-center hover:bg-white rounded-2xl transition-all shadow-sm border border-transparent hover:border-slate-200"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button>
+                    </div>
+                    
+                    <div class="p-8 space-y-6">
+                        <!-- Alerta Amigável para Despesas Parceladas -->
+                        <div v-if="modalEdit.form.installment_group_id" class="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-start gap-3 mb-2">
+                            <i data-lucide="alert-circle" class="w-5 h-5 text-amber-500 mt-0.5"></i>
+                            <div>
+                                <p class="text-xs font-bold text-amber-800 uppercase tracking-widest mb-1">Atenção: Despesa Parcelada</p>
+                                <p class="text-xs text-amber-600 font-medium">Você está editando apenas esta parcela específica. Para alterar toda a compra, recomenda-se excluir os lançamentos e refazê-los.</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="input-group md:col-span-2">
+                                <label>Descrição</label>
+                                <input v-model="modalEdit.form.description" type="text" class="premium-input">
+                            </div>
+                            <div class="input-group">
+                                <label>Valor (R$)</label>
+                                <input v-model="modalEdit.form.amount" type="number" step="0.01" class="premium-input">
+                            </div>
+                            <div class="input-group">
+                                <label>Data do Lançamento / Vencimento</label>
+                                <input v-model="modalEdit.form.date" type="date" class="premium-input">
+                            </div>
+                            <div class="input-group">
+                                <label>Conta / Cartão</label>
+                                <select v-model="modalEdit.form.account_id" class="premium-input">
+                                    <option v-for="c in contas" :key="c.id" :value="c.id">{{ c.name }}</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>Grupo de Despesa</label>
+                                <select v-model="modalEdit.form.category_id" class="premium-input">
+                                    <option v-for="cat in categorias" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                                </select>
+                            </div>
+                            <div class="input-group md:col-span-2">
+                                <label>Subgrupo</label>
+                                <select v-model="modalEdit.form.subgroup" class="premium-input">
+                                    <option value="">Nenhum / Opcional</option>
+                                    <option v-for="sub in subgruposEditFormatados" :key="sub" :value="sub">{{ sub }}</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-8 bg-slate-50/50 pt-6">
+                        <button @click="salvarEdicao" :disabled="loading" class="w-full btn-confirm disabled:opacity-50">
+                            {{ loading ? 'Processando...' : 'Salvar Alterações' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
     </div>
 
     <script>
@@ -236,17 +308,17 @@
                 const mesReferencia = ref(hoje.getMonth() + 1);
                 const anoReferencia = ref(hoje.getFullYear());
 
+                // FORMULÁRIO PRINCIPAL (NOVO LANÇAMENTO)
                 const form = ref({
-                    description: '',
-                    amount: null,
+                    description: '', amount: null,
                     due_date: new Date().toISOString().substr(0, 10),
                     purchase_date: new Date().toISOString().substr(0, 10),
-                    account_id: '',
-                    category_id: '',
-                    subgroup: '',
-                    is_credit: false,
-                    installments: 1
+                    account_id: '', category_id: '', subgroup: '',
+                    is_credit: false, installments: 1
                 });
+
+                // FORMULÁRIO SECUNDÁRIO (EDIÇÃO)
+                const modalEdit = ref({ show: false, form: {} });
 
                 const nomeMesReferencia = computed(() => new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date(anoReferencia.value, mesReferencia.value - 1)));
                 const totalMes = computed(() => despesas.value.reduce((acc, curr) => acc + curr.amount, 0));
@@ -261,8 +333,9 @@
                     return grupos;
                 });
 
-                const subgruposFormatados = computed(() => {
-                    const cat = categorias.value.find(c => c.id === form.value.category_id);
+                // Lógica unificada para tratar JSON de Subgrupos do Banco
+                const parserSubgrupos = (catId) => {
+                    const cat = categorias.value.find(c => c.id === catId);
                     if (!cat || !cat.subgroups) return [];
                     const raw = cat.subgroups;
                     if (typeof raw === 'string' && (raw.startsWith('[') || raw.startsWith('{'))) {
@@ -273,7 +346,10 @@
                         } catch (e) { return [raw]; }
                     }
                     return raw.split(',').map(s => s.trim()).filter(s => s !== '');
-                });
+                };
+
+                const subgruposFormatados = computed(() => parserSubgrupos(form.value.category_id));
+                const subgruposEditFormatados = computed(() => parserSubgrupos(modalEdit.value.form.category_id));
 
                 const carregarDados = async () => {
                     try {
@@ -320,9 +396,45 @@
                 };
 
                 const excluirDespesa = async (id) => {
-                    if (!confirm("Remover lançamento?")) return;
+                    if (!confirm("Remover lançamento permanentemente?")) return;
                     await fetch(`http://localhost:3000/api/despesas/${id}`, { method: 'DELETE' });
                     carregarDados();
+                };
+
+                // --- FUNÇÕES DE EDIÇÃO (UPDATE) ---
+                const abrirEdicao = (d) => {
+                    modalEdit.value.form = { ...d };
+                    modalEdit.value.show = true;
+                    nextTick(() => lucide.createIcons());
+                };
+
+                const fecharEdicao = () => {
+                    modalEdit.value.show = false;
+                };
+
+                const salvarEdicao = async () => {
+                    if (!modalEdit.value.form.description || !modalEdit.value.form.amount || !modalEdit.value.form.account_id) {
+                        alert("Os campos Descrição, Valor e Conta são obrigatórios.");
+                        return;
+                    }
+                    loading.value = true;
+                    try {
+                        const res = await fetch(`http://localhost:3000/api/despesas/${modalEdit.value.form.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(modalEdit.value.form)
+                        });
+                        if (res.ok) {
+                            fecharEdicao();
+                            await carregarDados();
+                        } else {
+                            alert("Erro ao atualizar o lançamento no servidor.");
+                        }
+                    } catch (e) {
+                        alert("Erro de conexão com o servidor.");
+                    } finally {
+                        loading.value = false;
+                    }
                 };
 
                 const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -337,7 +449,9 @@
                 return { 
                     loading, contas, categorias, despesas, form, subgruposFormatados, totalMes,
                     mesReferencia, anoReferencia, nomeMesReferencia, despesasAgrupadas,
-                    mudarMes, calcularTotalGrupo, onCategoryChange, salvarDespesa, excluirDespesa, formatarMoeda, formatarData 
+                    mudarMes, calcularTotalGrupo, onCategoryChange, salvarDespesa, excluirDespesa, 
+                    formatarMoeda, formatarData,
+                    modalEdit, abrirEdicao, fecharEdicao, salvarEdicao, subgruposEditFormatados
                 };
             }
         }).mount('#app');
