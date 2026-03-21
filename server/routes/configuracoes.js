@@ -29,13 +29,79 @@ const garantirEsquemaAtualizado = () => {
 };
 
 /**
+ * GET: EXPORTAR DADOS PARA EXCEL (CSV)
+ * Rota dedicada para gerar relatório analítico completo.
+ */
+router.get('/export/csv', (req, res) => {
+    try {
+        const sql = `
+            SELECT 
+                t.date as DataLancamento,
+                t.purchase_date as DataCompra,
+                t.description as Descricao,
+                t.amount as Valor,
+                CASE WHEN t.type = 'expense' THEN 'Despesa' ELSE 'Receita' END as Tipo,
+                c.name as Categoria,
+                t.subgroup as Subgrupo,
+                a.name as Conta
+            FROM Transactions t
+            LEFT JOIN Categories c ON t.category_id = c.id
+            LEFT JOIN Accounts a ON t.account_id = a.id
+            ORDER BY t.date DESC
+        `;
+        const rows = queryAll(sql);
+
+        if (rows.length === 0) {
+            return res.status(404).send("Nenhum dado encontrado para exportar.");
+        }
+
+        // Prepara o cabeçalho CSV usando ponto-e-vírgula (padrão do Excel no Brasil)
+        const colunas = Object.keys(rows[0]);
+        let csvBr = colunas.join(';') + '\n';
+
+        // Preenche as linhas processando formatações
+        rows.forEach(row => {
+            const valores = colunas.map(col => {
+                let val = row[col] === null ? '' : row[col].toString();
+                
+                // Escapar aspas duplas
+                val = val.replace(/"/g, '""');
+                
+                // Tratar o valor monetário para o Excel BR (substitui . por ,)
+                if (col === 'Valor') {
+                    val = val.replace('.', ',');
+                }
+
+                // Envolver campos em aspas se contiverem caracteres que quebram o CSV
+                if (val.search(/("|;|\n)/g) >= 0) {
+                    val = `"${val}"`;
+                }
+                return val;
+            });
+            csvBr += valores.join(';') + '\n';
+        });
+
+        // Configuração dos headers HTTP para download de arquivo e codificação UTF-8
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename="mywallet3_extrato_completo.csv"');
+        
+        // Escreve o BOM (Byte Order Mark) para forçar o Excel a ler acentuações corretamente
+        res.write(Buffer.from('\uFEFF', 'utf-8'));
+        res.write(csvBr);
+        res.end();
+        
+    } catch (err) {
+        console.error("Erro ao exportar CSV:", err.message);
+        res.status(500).send("Erro interno ao gerar o arquivo de exportação.");
+    }
+});
+
+/**
  * GET: BUSCAR LISTAS (Contas, GruposDespesa, GruposReceita)
- * Versão robusta: Garante que colunas ausentes em bancos antigos não quebrem a rota.
  */
 router.get('/', (req, res) => {
     const { type } = req.query;
 
-    // Executa o auto-reparo antes de qualquer consulta
     garantirEsquemaAtualizado();
 
     try {
@@ -48,7 +114,6 @@ router.get('/', (req, res) => {
             rows = queryAll("SELECT * FROM Categories WHERE type = 'revenue' ORDER BY name");
         }
         
-        // Normalização para garantir que o frontend não receba campos undefined
         const normalizedRows = rows.map(row => ({
             ...row,
             subgroups: row.subgroups || '',
@@ -58,7 +123,6 @@ router.get('/', (req, res) => {
 
         res.json(normalizedRows);
     } catch (err) {
-        console.error(">>> [ERRO GET CONFIG]", err.message);
         res.status(500).json({ error: "Erro ao carregar dados. O banco pode estar em um formato incompatível." });
     }
 });
@@ -95,7 +159,6 @@ router.post('/:type', (req, res) => {
 
         res.status(400).json({ error: "Tipo de cadastro inválido." });
     } catch (err) {
-        console.error("Erro no POST configuracoes:", err.message);
         res.status(500).json({ error: err.message });
     }
 });
@@ -129,7 +192,6 @@ router.put('/:type', (req, res) => {
 
         res.status(400).json({ error: "Tipo de atualização inválido." });
     } catch (err) {
-        console.error("Erro no PUT configuracoes:", err.message);
         res.status(500).json({ error: err.message });
     }
 });

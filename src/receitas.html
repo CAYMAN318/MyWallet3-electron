@@ -3,392 +3,382 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyWallet3 - Receitas (Vue.js)</title>
+    <title>MyWallet3 - Receitas</title>
     
-    <!-- Bibliotecas Locais -->
     <script src="libs/tailwindcss.js"></script>
     <script src="libs/vue.global.js"></script>
     <script src="libs/lucide.js"></script>
 
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
-        .fade-enter-from, .fade-leave-to { opacity: 0; }
-        /* Scrollbar personalizada */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        /* Garante que ícones dentro de spans fiquem alinhados */
-        span.icon-wrapper { display: inline-flex; align-items: center; }
+        [v-cloak] { display: none; }
+        
+        .premium-card {
+            background: white;
+            border-radius: 2.5rem;
+            border: 1px solid #f1f5f9;
+            box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.04);
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: 900;
+            text-transform: uppercase;
+            font-size: 10px;
+            color: #94a3b8;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+            margin-left: 4px;
+        }
+
+        .premium-input {
+            width: 100%;
+            padding: 14px 20px;
+            border-radius: 1.25rem;
+            border: 1px solid #e2e8f0;
+            background-color: #f8fafc;
+            font-size: 14px;
+            font-weight: 600;
+            color: #334155;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+        }
+
+        .premium-input:focus {
+            background-color: white;
+            border-color: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.08);
+        }
+
+        .btn-confirm {
+            background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+            color: white;
+            padding: 18px;
+            border-radius: 1.5rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .btn-confirm:hover:not(:disabled) {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        .category-header { background-color: #f8fafc; border-left: 4px solid #10b981; }
+        .fade-slide-enter-active, .fade-slide-leave-active { transition: all 0.3s ease; }
+        .fade-slide-enter-from, .fade-slide-leave-to { opacity: 0; transform: translateY(-10px); }
     </style>
 </head>
-<body class="p-6 text-gray-800">
+<body class="p-6">
 
-    <!-- O APP VUE COMEÇA AQUI -->
-    <div id="app" class="max-w-6xl mx-auto">
+    <div id="app" v-cloak class="max-w-6xl mx-auto">
         
-        <!-- Cabeçalho (Verde para Receitas) -->
-        <div class="flex justify-between items-center mb-8 border-b border-gray-200 pb-4">
+        <!-- Cabeçalho de Página -->
+        <div class="flex justify-between items-center mb-10">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900">Receitas</h1>
-                <p class="text-sm text-gray-500 mt-1">Gerencie suas entradas e ganhos.</p>
+                <h1 class="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Fluxo de Entrada</h1>
+                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Gestão de Receitas e Rendimentos</p>
             </div>
-            
-            <div class="flex items-center gap-4">
-                <div class="text-right">
-                    <p class="text-xs text-gray-500 uppercase font-semibold">Total deste mês</p>
-                    <p class="text-2xl font-bold text-emerald-600">+ {{ formatarMoeda(totalMes) }}</p>
-                </div>
+            <div class="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shadow-inner">
+                <i data-lucide="arrow-up-right" class="w-8 h-8"></i>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <!-- COLUNA DA ESQUERDA: FORMULÁRIO DE LANÇAMENTO -->
-            <div class="lg:col-span-1">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 sticky top-6">
-                    <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <span class="icon-wrapper" v-html="getIcon('plus-circle', 'w-5 h-5 text-emerald-500')"></span>
-                        Nova Receita
-                    </h2>
-
-                    <form @submit.prevent="salvarReceita" class="space-y-4">
-                        
-                        <!-- Valor -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-2.5 text-gray-400 font-medium">R$</span>
-                                <input type="number" step="0.01" v-model="form.amount" required 
-                                    class="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none font-semibold text-gray-800" 
-                                    placeholder="0,00">
-                            </div>
-                        </div>
-
-                        <!-- Descrição -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
-                            <input type="text" v-model="form.description" required 
-                                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" 
-                                placeholder="Ex: Salário, Venda, Freelance">
-                        </div>
-
-                        <!-- Conta (Opcional para Receitas) -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Conta de Entrada</label>
-                            <select v-model="form.accountId" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
-                                <option value="" disabled>Selecione a conta (Opcional)</option>
-                                <option v-for="conta in contas" :key="conta.id" :value="conta.id">
-                                    {{ conta.name }}
-                                </option>
-                            </select>
-                        </div>
-
-                        <!-- Categoria -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-                            <select v-model="form.categoryId" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
-                                <option value="" disabled>Selecione a categoria</option>
-                                <option v-for="cat in categorias" :key="cat.id" :value="cat.id">
-                                    {{ cat.name }}
-                                </option>
-                            </select>
-                        </div>
-
-                        <!-- Data -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Data do Recebimento</label>
-                            <input type="date" v-model="form.date" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-gray-600">
-                        </div>
-
-                        <!-- Checkbox Recorrente (Fixo) -->
-                        <div class="flex items-center justify-between pt-2">
-                            <label class="flex items-center gap-2 cursor-pointer" title="Receita recorrente mensal">
-                                <input type="checkbox" v-model="form.isFixed" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 border-gray-300">
-                                <span class="text-sm text-gray-600">É receita fixa?</span>
-                            </label>
-                            
-                            <!-- Indicador Automático -->
-                            <span v-if="computedIsFixed" class="text-xs text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded flex items-center gap-1">
-                                <span class="icon-wrapper" v-html="getIcon('lock', 'w-3 h-3')"></span>
-                                Categoria Fixa
-                            </span>
-                        </div>
-
-                        <!-- BOTÃO SALVAR -->
-                        <button type="submit" :disabled="loading" class="w-full bg-gray-900 hover:bg-black text-white font-bold py-3 rounded-xl shadow-lg transition-all transform hover:scale-[1.02] flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-2">
-                            <span v-if="loading" class="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></span>
-                            <span v-else>Salvar Receita</span>
-                            <span v-if="!loading" class="icon-wrapper" v-html="getIcon('check', 'w-5 h-5')"></span>
-                        </button>
-
-                    </form>
-                </div>
-            </div>
-
-            <!-- COLUNA DA DIREITA: LISTA DE RECEITAS -->
-            <div class="lg:col-span-2 space-y-6">
+        <!-- FORMULÁRIO PRINCIPAL -->
+        <div class="premium-card p-10 mb-10">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
                 
-                <!-- Filtro de Mês -->
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
-                    <button @click="mudarMes(-1)" class="p-2 hover:bg-gray-100 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-200 transition">
-                         <span class="icon-wrapper" v-html="getIcon('chevron-left', 'w-6 h-6')"></span>
-                    </button>
-                    
-                    <div class="text-center">
-                        <span class="text-sm text-gray-400 font-medium uppercase tracking-wider">Período</span>
-                        <h3 class="text-lg font-bold text-gray-800 capitalize">{{ filtroData.mesNome }} {{ filtroData.ano }}</h3>
-                    </div>
-
-                    <button @click="mudarMes(1)" class="p-2 hover:bg-gray-100 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-200 transition">
-                         <span class="icon-wrapper" v-html="getIcon('chevron-right', 'w-6 h-6')"></span>
-                    </button>
+                <div class="md:col-span-8 input-group">
+                    <label>Origem / Descrição</label>
+                    <input v-model="form.description" type="text" class="premium-input" placeholder="Ex: Salário, Rendimentos, Pix...">
+                </div>
+                
+                <div class="md:col-span-4 input-group">
+                    <label>Valor (R$)</label>
+                    <input v-model="form.amount" type="number" step="0.01" class="premium-input" placeholder="0,00">
+                </div>
+                
+                <div class="md:col-span-4 input-group">
+                    <label>Data do Recebimento</label>
+                    <input v-model="form.date" type="date" class="premium-input">
                 </div>
 
-                <!-- Lista de Transações -->
-                <div v-if="loadingHistory" class="text-center py-12">
-                    <div class="animate-spin h-8 w-8 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto mb-3"></div>
-                    <p class="text-gray-400 text-sm">Carregando histórico...</p>
+                <div class="md:col-span-4 input-group">
+                    <label>Conta Destino</label>
+                    <select v-model="form.account_id" class="premium-input">
+                        <option value="">Nenhuma / Dinheiro</option>
+                        <option v-for="c in contas" :key="c.id" :value="c.id">{{ c.name }}</option>
+                    </select>
                 </div>
 
-                <div v-else class="space-y-4">
-                    <div v-if="receitasPorCategoria.length === 0" class="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-300">
-                        <div class="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <span class="icon-wrapper" v-html="getIcon('piggy-bank', 'w-8 h-8 text-gray-300')"></span>
-                        </div>
-                        <h3 class="text-gray-900 font-medium">Nenhuma receita neste mês</h3>
-                        <p class="text-gray-400 text-sm mt-1">Seus ganhos aparecerão aqui.</p>
+                <div class="md:col-span-4 input-group">
+                    <label>Grupo de Receita</label>
+                    <select v-model="form.category_id" class="premium-input">
+                        <option value="">Selecione...</option>
+                        <option v-for="cat in categorias" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                    </select>
+                </div>
+
+                <!-- Botão de Ação -->
+                <div class="md:col-span-12 pt-4">
+                    <button @click="salvarReceita" :disabled="loading" class="w-full btn-confirm disabled:opacity-50">
+                        {{ loading ? 'Sincronizando...' : 'Confirmar e Lançar Receita' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- EXTRATO COM NAVEGAÇÃO POR MÊS -->
+        <div class="premium-card overflow-hidden">
+            
+            <div class="p-8 border-b border-slate-100 bg-slate-50/50 flex flex-wrap justify-between items-center gap-4">
+                <div class="flex items-center gap-4">
+                    <button @click="mudarMes(-1)" class="p-2 hover:bg-white rounded-xl transition-all border border-slate-200 text-slate-400">
+                        <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                    </button>
+                    <div class="text-center min-w-[150px]">
+                        <h3 class="font-black text-slate-800 uppercase text-sm tracking-tighter">{{ nomeMesReferencia }}</h3>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ anoReferencia }}</p>
+                    </div>
+                    <button @click="mudarMes(1)" class="p-2 hover:bg-white rounded-xl transition-all border border-slate-200 text-slate-400">
+                        <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <div class="text-right">
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Arrecadado no Mês</p>
+                    <h4 class="text-2xl font-black text-emerald-500 tracking-tighter">+ {{ formatarMoeda(totalMes) }}</h4>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <div v-if="Object.keys(receitasAgrupadas).length === 0" class="p-20 text-center">
+                    <i data-lucide="inbox" class="w-12 h-12 mx-auto text-slate-200 mb-4"></i>
+                    <p class="text-slate-400 font-bold uppercase text-xs">Nenhuma receita para este período.</p>
+                </div>
+
+                <div v-for="(itens, categoria) in receitasAgrupadas" :key="categoria">
+                    <div class="category-header px-8 py-3 flex justify-between items-center">
+                        <span class="text-[11px] font-black text-emerald-600 uppercase tracking-widest">{{ categoria }}</span>
+                        <span class="text-[10px] font-bold text-slate-400">{{ formatarMoeda(calcularTotalGrupo(itens)) }}</span>
                     </div>
 
-                    <!-- AGRUPAMENTO POR CATEGORIA -->
-                    <div v-for="(cat, index) in receitasPorCategoria" :key="index" class="animate-fade-in">
-                        
-                        <div class="flex items-center justify-between mb-2 mt-6 px-1">
-                            <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                                <span class="icon-wrapper" v-html="getIcon('folder-open', 'w-5 h-5 text-gray-400')"></span>
-                                {{ cat.name }}
-                            </h3>
-                            <span class="text-sm font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                                Total: {{ formatarMoeda(cat.total) }}
-                            </span>
-                        </div>
-
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-50">
-                            
-                            <div v-for="item in cat.itens" :key="item.id" class="p-4 hover:bg-gray-50 transition group flex justify-between items-center relative">
-                                
-                                <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 rounded-full bg-emerald-100 flex flex-col items-center justify-center text-emerald-700 shrink-0 border-2 border-white shadow-sm">
-                                        <span class="text-lg font-extrabold leading-none">{{ obterDia(item.date) }}</span>
-                                        <span class="text-[9px] uppercase font-bold text-emerald-400 leading-none mt-0.5">{{ obterMesCurto(item.date) }}</span>
+                    <table class="w-full text-left">
+                        <tbody class="text-sm font-semibold text-slate-600">
+                            <tr v-for="r in itens" :key="r.id" class="border-b border-slate-50 hover:bg-slate-50/20 transition-colors group">
+                                <td class="p-8 w-32">{{ formatarData(r.date) }}</td>
+                                <td class="p-8">
+                                    <div class="font-black text-slate-800 uppercase text-xs">{{ r.description }}</div>
+                                </td>
+                                <td class="p-8">
+                                    <div class="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase">
+                                        <i data-lucide="wallet" class="w-3 h-3"></i>
+                                        {{ r.account_name || 'Dinheiro Espécie' }}
                                     </div>
-                                    
-                                    <div>
-                                        <h4 class="font-bold text-gray-800 text-sm md:text-base">{{ item.description }}</h4>
-                                        <div class="flex flex-wrap items-center gap-2 mt-1">
-                                            
-                                            <span class="text-xs text-gray-400 flex items-center gap-1">
-                                                <span class="icon-wrapper" v-html="getIcon('wallet', 'w-3 h-3')"></span>
-                                                {{ item.account_name || 'Carteira' }}
-                                            </span>
-
-                                            <span v-if="item.is_fixed" class="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1">
-                                                <span class="icon-wrapper" v-html="getIcon('lock', 'w-3 h-3')"></span> Fixo
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="flex items-center gap-4">
-                                    <span class="font-bold text-emerald-600 text-base md:text-lg whitespace-nowrap">
-                                        + {{ formatarMoeda(item.amount) }}
-                                    </span>
-                                    
-                                    <button @click="deletarItem(item.id)" class="text-gray-600 hover:text-red-700 transition p-2 hover:bg-red-50 rounded-lg absolute right-2 md:static" title="Excluir">
-                                        <span class="icon-wrapper" v-html="getIcon('trash-2', 'w-5 h-5')"></span>
+                                </td>
+                                <td class="p-8 text-right font-black text-emerald-500 text-sm w-40">+ {{ formatarMoeda(r.amount) }}</td>
+                                <td class="p-8 text-right w-28 whitespace-nowrap">
+                                    <button @click="abrirEdicao(r)" class="p-2 text-slate-300 hover:text-emerald-600 transition-all mr-1" title="Editar">
+                                        <i data-lucide="edit-2" class="w-4 h-4"></i>
                                     </button>
-                                </div>
+                                    <button @click="excluirReceita(r.id)" class="p-2 text-slate-300 hover:text-rose-500 transition-all" title="Excluir">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
+        <!-- MODAL DE EDIÇÃO -->
+        <transition name="fade-slide">
+            <div v-if="modalEdit.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                <div class="bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col border border-slate-100">
+                    <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <div>
+                            <h3 class="font-black text-slate-900 uppercase tracking-tighter text-xl leading-none">Editar Receita</h3>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase mt-2 tracking-widest">Ajuste os dados do rendimento</p>
+                        </div>
+                        <button @click="fecharEdicao" class="w-10 h-10 flex items-center justify-center hover:bg-white rounded-2xl transition-all shadow-sm border border-transparent hover:border-slate-200"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button>
+                    </div>
+                    
+                    <div class="p-8 space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="input-group md:col-span-2">
+                                <label>Origem / Descrição</label>
+                                <input v-model="modalEdit.form.description" type="text" class="premium-input">
+                            </div>
+                            <div class="input-group">
+                                <label>Valor (R$)</label>
+                                <input v-model="modalEdit.form.amount" type="number" step="0.01" class="premium-input">
+                            </div>
+                            <div class="input-group">
+                                <label>Data do Recebimento</label>
+                                <input v-model="modalEdit.form.date" type="date" class="premium-input">
+                            </div>
+                            <div class="input-group">
+                                <label>Conta Destino</label>
+                                <select v-model="modalEdit.form.account_id" class="premium-input">
+                                    <option value="">Nenhuma / Dinheiro</option>
+                                    <option v-for="c in contas" :key="c.id" :value="c.id">{{ c.name }}</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>Grupo de Receita</label>
+                                <select v-model="modalEdit.form.category_id" class="premium-input">
+                                    <option v-for="cat in categorias" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                                </select>
                             </div>
                         </div>
                     </div>
-                </div>
 
+                    <div class="p-8 bg-slate-50/50 pt-6">
+                        <button @click="salvarEdicao" :disabled="loading" class="w-full btn-confirm disabled:opacity-50">
+                            {{ loading ? 'Processando...' : 'Salvar Alterações' }}
+                        </button>
+                    </div>
+                </div>
             </div>
-        </div>
+        </transition>
 
     </div>
 
     <script>
-        const { createApp, ref, computed, onMounted, watch } = Vue;
+        const { createApp, ref, onMounted, computed, nextTick } = Vue;
 
         createApp({
             setup() {
-                const form = ref({
-                    description: '',
-                    amount: '',
-                    date: new Date().toISOString().split('T')[0],
-                    accountId: '',
-                    categoryId: '',
-                    isFixed: false
-                });
-
                 const loading = ref(false);
-                const loadingHistory = ref(false);
                 const contas = ref([]);
                 const categorias = ref([]);
-                const receitasHistorico = ref([]);
+                const receitas = ref([]);
                 
-                const dataAtual = ref(new Date());
+                const hoje = new Date();
+                const mesReferencia = ref(hoje.getMonth() + 1);
+                const anoReferencia = ref(hoje.getFullYear());
 
-                const getIcon = (name, classes = "") => {
-                    try {
-                        if (!window.lucide) return "";
-                        const pascalName = name.split('-').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('');
-                        const iconNode = (window.lucide.icons && window.lucide.icons[pascalName]) || window.lucide[pascalName];
-                        if (iconNode && typeof iconNode.toSvg === 'function') {
-                            return iconNode.toSvg({ class: classes });
-                        }
-                        return "";
-                    } catch (e) { return ""; }
-                };
-
-                const computedIsFixed = computed(() => {
-                    const cat = categorias.value.find(c => c.id === form.value.categoryId);
-                    return cat && cat.is_fixed;
+                const form = ref({
+                    description: '',
+                    amount: null,
+                    date: new Date().toISOString().substr(0, 10),
+                    account_id: '',
+                    category_id: ''
                 });
 
-                const filtroData = computed(() => {
-                    return {
-                        mes: dataAtual.value.getMonth() + 1,
-                        ano: dataAtual.value.getFullYear(),
-                        mesNome: dataAtual.value.toLocaleString('pt-BR', { month: 'long' })
-                    };
-                });
+                const modalEdit = ref({ show: false, form: {} });
 
-                const totalMes = computed(() => {
-                    return receitasHistorico.value.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
-                });
+                const nomeMesReferencia = computed(() => new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date(anoReferencia.value, mesReferencia.value - 1)));
+                const totalMes = computed(() => receitas.value.reduce((acc, curr) => acc + curr.amount, 0));
 
-                const receitasPorCategoria = computed(() => {
-                    const cats = {};
-                    receitasHistorico.value.forEach(item => {
-                        const catName = item.category_name || 'Outras Receitas';
-                        if (!cats[catName]) cats[catName] = { name: catName, total: 0, itens: [] };
-                        cats[catName].total += parseFloat(item.amount);
-                        cats[catName].itens.push(item);
+                const receitasAgrupadas = computed(() => {
+                    const grupos = {};
+                    receitas.value.forEach(r => {
+                        const cat = r.category_name || 'Sem Categoria';
+                        if (!grupos[cat]) grupos[cat] = [];
+                        grupos[cat].push(r);
                     });
-                    return Object.values(cats).sort((a, b) => b.total - a.total).map(cat => {
-                        cat.itens.sort((a,b) => new Date(b.date) - new Date(a.date));
-                        return cat;
-                    });
+                    return grupos;
                 });
 
-                const obterDia = (dateString) => dateString ? dateString.split('-')[2] : '--';
-                const obterMesCurto = (dateString) => {
-                    if(!dateString) return '';
-                    const m = parseInt(dateString.split('-')[1]);
-                    const meses = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
-                    return meses[m-1] || '';
-                };
-
-                const carregarConfigs = async () => {
+                const carregarDados = async () => {
                     try {
-                        const [resContas, resCats] = await Promise.all([
+                        const [resC, resD, resR] = await Promise.all([
                             fetch('http://localhost:3000/api/configuracoes?type=Conta'),
-                            fetch('http://localhost:3000/api/configuracoes?type=GrupoReceita')
+                            fetch('http://localhost:3000/api/configuracoes?type=GrupoReceita'),
+                            fetch(`http://localhost:3000/api/receitas?mes=${mesReferencia.value}&ano=${anoReferencia.value}`)
                         ]);
-                        contas.value = await resContas.json();
-                        categorias.value = await resCats.json();
-                    } catch (e) { console.error("Erro ao carregar configs:", e); }
+                        contas.value = await resC.json();
+                        categorias.value = await resD.json();
+                        receitas.value = await resR.json();
+                        nextTick(() => lucide.createIcons());
+                    } catch (e) { console.error(e); }
                 };
 
-                const carregarHistorico = async () => {
-                    loadingHistory.value = true;
-                    const m = filtroData.value.mes;
-                    const y = filtroData.value.ano;
-                    try {
-                        const res = await fetch('http://localhost:3000/api/receitas');
-                        const todosDados = await res.json();
-                        if (Array.isArray(todosDados)) {
-                            receitasHistorico.value = todosDados.filter(d => {
-                                if (!d.date) return false;
-                                const parts = d.date.split('-'); 
-                                const anoItem = parseInt(parts[0]);
-                                const mesItem = parseInt(parts[1]);
-                                return anoItem === y && mesItem === m;
-                            });
-                        } else {
-                            receitasHistorico.value = [];
-                        }
-                    } catch (e) { 
-                        console.error("Erro ao carregar histórico:", e); 
-                        receitasHistorico.value = [];
-                    }
-                    finally { loadingHistory.value = false; }
+                const mudarMes = (direcao) => {
+                    let novaData = new Date(anoReferencia.value, mesReferencia.value - 1 + direcao, 1);
+                    mesReferencia.value = novaData.getMonth() + 1;
+                    anoReferencia.value = novaData.getFullYear();
+                    carregarDados();
                 };
 
-                const formatarMoeda = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
-
-                const mudarMes = (delta) => {
-                    const novaData = new Date(dataAtual.value);
-                    novaData.setMonth(novaData.getMonth() + delta);
-                    dataAtual.value = novaData;
-                    carregarHistorico();
-                };
-
-                const deletarItem = async (id) => {
-                    if (!confirm("Tem certeza que deseja excluir esta receita?")) return;
-                    try {
-                        const res = await fetch(`http://localhost:3000/api/receitas/${id}`, { method: 'DELETE' });
-                        if (res.ok) carregarHistorico();
-                        else alert("Erro ao excluir.");
-                    } catch (e) { alert("Erro de conexão."); }
-                };
+                const calcularTotalGrupo = (itens) => itens.reduce((acc, curr) => acc + curr.amount, 0);
 
                 const salvarReceita = async () => {
+                    if (!form.value.description || !form.value.amount || !form.value.category_id) {
+                        alert("Preencha Descrição, Valor e o Grupo de Receita.");
+                        return;
+                    }
                     loading.value = true;
                     try {
-                        const payload = {
-                            description: form.value.description,
-                            amount: form.value.amount,
-                            date: form.value.date,
-                            accountId: form.value.accountId,
-                            categoryId: form.value.categoryId,
-                            isFixed: computedIsFixed.value || form.value.isFixed
-                        };
-
                         const res = await fetch('http://localhost:3000/api/receitas', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
+                            body: JSON.stringify(form.value)
                         });
-
                         if (res.ok) {
-                            form.value.description = '';
-                            form.value.amount = '';
-                            carregarHistorico();
-                        } else {
-                            alert("Erro ao salvar receita.");
-                        }
-                    } catch (error) {
-                        alert("Erro de conexão.");
-                    } finally {
-                        loading.value = false;
-                    }
+                            form.value.description = ''; 
+                            form.value.amount = null; 
+                            await carregarDados();
+                        } else { alert("Erro no servidor."); }
+                    } catch (e) { alert("Erro de conexão."); } finally { loading.value = false; }
                 };
 
-                onMounted(() => {
-                    carregarConfigs();
-                    carregarHistorico();
-                });
+                const abrirEdicao = (r) => {
+                    modalEdit.value.form = { ...r };
+                    modalEdit.value.show = true;
+                    nextTick(() => lucide.createIcons());
+                };
 
-                return {
-                    form, loading, loadingHistory,
-                    contas, categorias, receitasHistorico,
-                    receitasPorCategoria, filtroData, totalMes,
-                    salvarReceita, formatarMoeda, mudarMes,
-                    deletarItem, getIcon, obterDia, obterMesCurto,
-                    computedIsFixed
+                const fecharEdicao = () => { modalEdit.value.show = false; };
+
+                const salvarEdicao = async () => {
+                    if (!modalEdit.value.form.description || !modalEdit.value.form.amount || !modalEdit.value.form.category_id) {
+                        alert("Os campos Descrição, Valor e Grupo são obrigatórios.");
+                        return;
+                    }
+                    loading.value = true;
+                    try {
+                        const res = await fetch(`http://localhost:3000/api/receitas/${modalEdit.value.form.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(modalEdit.value.form)
+                        });
+                        if (res.ok) {
+                            fecharEdicao();
+                            await carregarDados();
+                        } else {
+                            alert("Erro ao atualizar a receita.");
+                        }
+                    } catch (e) { alert("Erro de conexão com o servidor."); } 
+                    finally { loading.value = false; }
+                };
+
+                const excluirReceita = async (id) => {
+                    if (!confirm("Remover esta receita permanentemente?")) return;
+                    await fetch(`http://localhost:3000/api/receitas/${id}`, { method: 'DELETE' });
+                    carregarDados();
+                };
+
+                const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+                const formatarData = (d) => {
+                    if(!d) return '--';
+                    const [ano, mes, dia] = d.split('-');
+                    return `${dia}/${mes}/${ano}`;
+                };
+
+                onMounted(carregarDados);
+
+                return { 
+                    loading, contas, categorias, receitas, form, totalMes,
+                    mesReferencia, anoReferencia, nomeMesReferencia, receitasAgrupadas,
+                    mudarMes, calcularTotalGrupo, salvarReceita, excluirReceita, 
+                    formatarMoeda, formatarData,
+                    modalEdit, abrirEdicao, fecharEdicao, salvarEdicao
                 };
             }
         }).mount('#app');

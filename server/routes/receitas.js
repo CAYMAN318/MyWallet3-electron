@@ -2,76 +2,96 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database'); 
 
-// Função auxiliar para consulta SQL (SÍNCRONA - better-sqlite3)
-const query = (sql, params = []) => {
-    return db.prepare(sql).all(params);
-};
-
-// GET: Listar receitas
+/**
+ * GET: Listar receitas filtradas por mês e ano
+ */
 router.get('/', (req, res) => {
+    const { mes, ano } = req.query;
     try {
-        const sql = `
+        let sql = `
             SELECT t.*, a.name as account_name, c.name as category_name 
             FROM Transactions t
             LEFT JOIN Accounts a ON t.account_id = a.id
             LEFT JOIN Categories c ON t.category_id = c.id
             WHERE t.type = 'revenue'
-            ORDER BY t.date DESC
         `;
-        const rows = query(sql, []);
-        res.json(rows);
+        let params = [];
+        
+        if (mes && ano) {
+            sql += ` AND strftime('%m', t.date) = ? AND strftime('%Y', t.date) = ?`;
+            params.push(String(mes).padStart(2, '0'), String(ano));
+        }
+        
+        sql += ` ORDER BY t.date DESC, t.id DESC`;
+        res.json(db.prepare(sql).all(params));
     } catch (err) {
         console.error(">>> [ERRO DB] Falha ao buscar receitas:", err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
-// POST: Criar receita
+/**
+ * POST: Criar receita
+ */
 router.post('/', (req, res) => {
-    const description = req.body.description || req.body.descricao;
-    const amount = req.body.amount || req.body.valor;
-    const date = req.body.date || req.body.data;
-    const isFixed = req.body.isFixed !== undefined ? req.body.isFixed : false;
+    const { description, amount, date, account_id, category_id, is_fixed } = req.body;
     
-    let accountId = req.body.accountId || req.body.formaPagamento; 
-    const categoryId = req.body.categoryId || req.body.grupo;
-
-    if (accountId === "" || accountId === "null") {
-        accountId = null;
-    }
-
-    if (!description || !amount || !date || !categoryId) {
+    if (!description || !amount || !date || !category_id) {
         return res.status(400).json({ error: "Descrição, Valor, Data e Grupo são obrigatórios." });
     }
 
-    const sql = `
-        INSERT INTO Transactions (account_id, category_id, description, type, amount, date, is_fixed)
-        VALUES (?, ?, ?, 'revenue', ?, ?, ?)
-    `;
-
-    const fixedInt = isFixed ? 1 : 0;
-    
     try {
-        const result = db.prepare(sql).run(accountId, categoryId, description, amount, date, fixedInt);
-        res.status(201).json({ id: result.lastInsertRowid, message: "Receita salva com sucesso!" });
+        const sql = `
+            INSERT INTO Transactions (description, amount, date, account_id, category_id, type, is_fixed)
+            VALUES (?, ?, ?, ?, ?, 'revenue', ?)
+        `;
+        const result = db.prepare(sql).run(
+            description, 
+            amount, 
+            date, 
+            account_id || null, 
+            category_id, 
+            is_fixed ? 1 : 0
+        );
+        res.status(201).json({ id: result.lastInsertRowid, success: true });
     } catch (err) {
         console.error("Erro ao salvar receita:", err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
-// DELETE: Excluir Receita
-router.delete('/:id', (req, res) => {
-    const sql = "DELETE FROM Transactions WHERE id = ?";
-    
+/**
+ * PUT: Editar Receita
+ */
+router.put('/:id', (req, res) => {
+    const { id } = req.params;
+    const { description, amount, date, account_id, category_id } = req.body;
+
     try {
-        const result = db.prepare(sql).run(req.params.id);
+        const stmt = db.prepare(`
+            UPDATE Transactions 
+            SET description = ?, amount = ?, date = ?, account_id = ?, category_id = ?
+            WHERE id = ? AND type = 'revenue'
+        `);
+        stmt.run(description, amount, date, account_id || null, category_id || null, id);
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Erro ao atualizar receita:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * DELETE: Excluir Receita
+ */
+router.delete('/:id', (req, res) => {
+    try {
+        const result = db.prepare("DELETE FROM Transactions WHERE id = ?").run(req.params.id);
         if (result.changes === 0) {
             return res.status(404).json({ error: "Receita não encontrada." });
         }
-        res.json({ message: "Receita excluída!" });
+        res.json({ success: true });
     } catch (err) {
-        console.error("Erro ao excluir receita:", err.message);
         res.status(500).json({ error: err.message });
     }
 });
