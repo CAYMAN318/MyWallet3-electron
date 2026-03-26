@@ -105,7 +105,8 @@
                 </div>
                 <div class="flex gap-4 text-xs font-bold uppercase tracking-widest">
                     <span class="flex items-center gap-1 text-emerald-600"><span class="w-2 h-2 rounded-full bg-emerald-600"></span> Pago</span>
-                    <span class="flex items-center gap-1 text-red-600"><span class="w-2 h-2 rounded-full bg-red-600"></span> Pendente</span>
+                    <span class="flex items-center gap-1 text-amber-500"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Lançado</span>
+                    <span class="flex items-center gap-1 text-red-600"><span class="w-2 h-2 rounded-full bg-red-600"></span> Aguardando</span>
                 </div>
             </div>
 
@@ -118,10 +119,19 @@
                 <div v-else class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 custom-scroll overflow-y-auto max-h-[400px]">
                     <div v-for="item in matriz" :key="item.subgroup_name" 
                          class="matriz-item p-4 rounded-2xl border-2 flex flex-col items-center justify-center text-center gap-2 shadow-sm"
-                         :class="item.status === 'pago' ? 'matriz-pago' : 'matriz-pendente'">
+                         :class="{
+                             'matriz-pago': item.status === 'pago',
+                             'bg-amber-50 border-amber-200 text-amber-800': item.status === 'pendente_lancado',
+                             'matriz-pendente': item.status === 'pendente_ausente'
+                         }">
                         
-                        <div class="p-2 rounded-full" :class="item.status === 'pago' ? 'bg-emerald-100' : 'bg-red-100'">
-                            <i :data-lucide="item.status === 'pago' ? 'check' : 'clock'" class="w-5 h-5"></i>
+                        <div class="p-2 rounded-full" 
+                             :class="{
+                                 'bg-emerald-100 text-emerald-600': item.status === 'pago',
+                                 'bg-amber-100 text-amber-600': item.status === 'pendente_lancado',
+                                 'bg-red-100 text-red-600': item.status === 'pendente_ausente'
+                             }">
+                            <i :data-lucide="item.status === 'pago' ? 'check' : (item.status === 'pendente_lancado' ? 'alert-circle' : 'clock')" class="w-5 h-5"></i>
                         </div>
                         
                         <div class="leading-tight">
@@ -129,7 +139,10 @@
                             <p class="font-black text-sm">{{ item.subgroup_name }}</p>
                         </div>
 
-                        <p v-if="item.status === 'pago'" class="text-[11px] font-bold bg-emerald-200/50 px-2 py-0.5 rounded-full mt-1">
+                        <p v-if="item.status === 'pago'" class="text-[11px] font-bold bg-emerald-200/50 text-emerald-700 px-2 py-0.5 rounded-full mt-1">
+                            {{ formatarMoeda(item.valor) }}
+                        </p>
+                        <p v-else-if="item.status === 'pendente_lancado'" class="text-[11px] font-bold bg-amber-200/50 text-amber-700 px-2 py-0.5 rounded-full mt-1">
                             {{ formatarMoeda(item.valor) }}
                         </p>
                         <p v-else class="text-[10px] font-bold uppercase tracking-tighter opacity-70">Aguardando</p>

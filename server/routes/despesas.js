@@ -28,12 +28,12 @@ router.get('/', (req, res) => {
 });
 
 /**
- * POST: Criar despesa (Lógica de Negócio Pura e Parcelamento)
+ * POST: Criar despesa (Com inteligência de Pendente/Pago)
  */
 router.post('/', (req, res) => {
     const { 
         description, amount, due_date, purchase_date, 
-        account_id, category_id, subgroup, is_credit, installments 
+        account_id, category_id, subgroup, is_credit, installments, is_paid 
     } = req.body;
 
     try {
@@ -41,14 +41,17 @@ router.post('/', (req, res) => {
         const valorParcela = amount / numParcelas;
         const groupId = is_credit && numParcelas > 1 ? `GRP_${Date.now()}` : null;
         
-        // Se não for crédito, o vencimento é o dia da compra
+        // Se for crédito, o status é SEMPRE 0 (Pendente). Se for débito/dinheiro, respeita o toggle.
+        const statusPagamento = is_credit ? 0 : (is_paid ? 1 : 0);
+        
+        // Se não for crédito, o vencimento é o dia da compra (ou a data futura informada)
         const dataReferencia = is_credit ? due_date : purchase_date;
 
         const stmt = db.prepare(`
             INSERT INTO Transactions (
                 description, amount, date, purchase_date, 
                 account_id, category_id, subgroup, type, is_paid, installment_group_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'expense', 0, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'expense', ?, ?)
         `);
 
         const insertMany = db.transaction(() => {
@@ -69,6 +72,7 @@ router.post('/', (req, res) => {
                     account_id, 
                     category_id || null, 
                     subgroup || '',
+                    statusPagamento,
                     groupId
                 );
             }
@@ -83,17 +87,34 @@ router.post('/', (req, res) => {
 });
 
 /**
+ * PATCH: Alternar status de pagamento rapidamente (Dar Baixa / Reverter)
+ */
+router.patch('/:id/status', (req, res) => {
+    try {
+        db.prepare(`
+            UPDATE Transactions 
+            SET is_paid = CASE WHEN is_paid = 1 THEN 0 ELSE 1 END 
+            WHERE id = ? AND type = 'expense'
+        `).run(req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Erro ao alterar status:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
  * PUT: Atualizar despesa existente (Editar Lançamento)
  */
 router.put('/:id', (req, res) => {
     const { id } = req.params;
-    const { description, amount, date, account_id, category_id, subgroup } = req.body;
+    const { description, amount, date, account_id, category_id, subgroup, is_paid } = req.body;
 
     try {
         const stmt = db.prepare(`
             UPDATE Transactions 
             SET description = ?, amount = ?, date = ?, 
-                account_id = ?, category_id = ?, subgroup = ?
+                account_id = ?, category_id = ?, subgroup = ?, is_paid = ?
             WHERE id = ? AND type = 'expense'
         `);
         
@@ -104,6 +125,7 @@ router.put('/:id', (req, res) => {
             account_id, 
             category_id || null, 
             subgroup || '', 
+            is_paid ? 1 : 0,
             id
         );
         res.json({ success: true });

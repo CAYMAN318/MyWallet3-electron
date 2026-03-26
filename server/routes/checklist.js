@@ -21,9 +21,9 @@ router.get('/status', (req, res) => {
             JOIN Categories c ON ch.category_id = c.id
         `).all();
 
-        // 2. Busca lançamentos do mês
+        // 2. Busca lançamentos do mês (Agora verificando a coluna is_paid)
         const lancamentos = db.prepare(`
-            SELECT category_id, subgroup, amount, date, purchase_date
+            SELECT category_id, subgroup, amount, date, purchase_date, is_paid
             FROM Transactions
             WHERE strftime('%Y-%m', date) = ? OR strftime('%Y-%m', purchase_date) = ?
         `).all([periodo, periodo]);
@@ -49,16 +49,20 @@ router.get('/status', (req, res) => {
         const resultado = matriz.map(item => {
             const nomeConfigurado = extrairNomeSubgrupo(item.subgroup_name);
             
-            const pago = lancamentos.find(l => {
+            const transacao = lancamentos.find(l => {
                 const nomeLancado = extrairNomeSubgrupo(l.subgroup);
                 return l.category_id === item.category_id && nomeLancado === nomeConfigurado;
             });
 
+            // Verifica as novas regras de pendência
+            const isEfetivamentePago = transacao && transacao.is_paid === 1;
+            const isLancadoMasPendente = transacao && transacao.is_paid === 0;
+
             return {
                 ...item,
-                status: pago ? 'pago' : 'pendente',
-                valor: pago ? pago.amount : 0,
-                data: pago ? (pago.purchase_date || pago.date) : null
+                status: isEfetivamentePago ? 'pago' : (isLancadoMasPendente ? 'pendente_lancado' : 'pendente_ausente'),
+                valor: transacao ? transacao.amount : 0,
+                data: transacao ? (transacao.purchase_date || transacao.date) : null
             };
         });
 

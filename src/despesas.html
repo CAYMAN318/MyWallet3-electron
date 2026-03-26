@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -50,6 +50,12 @@
             box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.08);
         }
 
+        .premium-input:disabled {
+            background-color: #f1f5f9;
+            color: #94a3b8;
+            cursor: not-allowed;
+        }
+
         .btn-confirm {
             background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
             color: white;
@@ -85,7 +91,7 @@
         <div class="flex justify-between items-center mb-10">
             <div>
                 <h1 class="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Fluxo de Saída</h1>
-                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Gestão de Gastos e Crédito</p>
+                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Gestão de Gastos e Orçamentos</p>
             </div>
             <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center shadow-inner">
                 <i data-lucide="arrow-down-right" class="w-8 h-8"></i>
@@ -96,10 +102,9 @@
         <div class="premium-card p-10 mb-10">
             <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
                 
-                <!-- Linha 1: Sem Vencimento -->
                 <div class="md:col-span-8 input-group">
                     <label>Descrição da Despesa</label>
-                    <input v-model="form.description" type="text" class="premium-input" placeholder="O que você comprou?">
+                    <input v-model="form.description" type="text" class="premium-input" placeholder="O que você comprou / Qual é a conta?">
                 </div>
                 
                 <div class="md:col-span-4 input-group">
@@ -107,9 +112,8 @@
                     <input v-model="form.amount" type="number" step="0.01" class="premium-input" placeholder="0,00">
                 </div>
                 
-                <!-- Linha 2 -->
                 <div class="md:col-span-3 input-group">
-                    <label>Data da Compra</label>
+                    <label>Data da Compra / Emissão</label>
                     <input v-model="form.purchase_date" type="date" class="premium-input">
                 </div>
 
@@ -137,15 +141,24 @@
                     </select>
                 </div>
 
-                <!-- Linha 3 -->
-                <div class="md:col-span-12">
-                    <label class="flex items-center gap-4 p-4 bg-slate-50/50 rounded-2xl border border-slate-100 cursor-pointer hover:bg-white transition-all w-fit pr-8">
-                        <input type="checkbox" v-model="form.is_credit" class="w-6 h-6 rounded-lg text-indigo-600 border-slate-300">
-                        <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">Compra no Crédito / Parcelada?</span>
+                <!-- LINHA DE CONTROLE DE PAGAMENTO E CRÉDITO -->
+                <div class="md:col-span-12 flex flex-wrap items-center gap-6 p-5 bg-slate-50/50 rounded-2xl border border-slate-100">
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" v-model="form.is_credit" class="w-5 h-5 rounded-lg text-indigo-600 border-slate-300 focus:ring-indigo-500">
+                        <span class="text-[11px] font-black text-slate-600 uppercase tracking-widest group-hover:text-indigo-600 transition-colors">Compra no Crédito / Parcelada?</span>
+                    </label>
+                    
+                    <div class="h-6 w-px bg-slate-200 hidden md:block"></div>
+                    
+                    <label class="flex items-center gap-3" :class="form.is_credit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer group'">
+                        <input type="checkbox" v-model="form.is_paid" :disabled="form.is_credit" class="w-5 h-5 rounded-lg text-emerald-500 border-slate-300 focus:ring-emerald-500 disabled:bg-slate-200">
+                        <span class="text-[11px] font-black uppercase tracking-widest transition-colors" :class="form.is_paid ? 'text-emerald-600' : 'text-amber-500'">
+                            {{ form.is_paid ? 'Já foi pago (Dinheiro/Débito)' : 'Agendado / Pendente' }}
+                        </span>
                     </label>
                 </div>
 
-                <!-- Seção Crédito: O Vencimento aparece AQUI -->
+                <!-- Seção Crédito -->
                 <transition name="fade-slide">
                     <div v-if="form.is_credit" class="md:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-8 p-8 credit-section rounded-[2rem]">
                         <div class="input-group">
@@ -159,15 +172,15 @@
                     </div>
                 </transition>
 
-                <div class="md:col-span-12 pt-4">
+                <div class="md:col-span-12 pt-2">
                     <button @click="salvarDespesa" :disabled="loading" class="w-full btn-confirm disabled:opacity-50">
-                        {{ loading ? 'Salvando...' : 'Confirmar e Lançar' }}
+                        {{ loading ? 'Salvando...' : 'Confirmar Lançamento' }}
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- EXTRATO -->
+        <!-- EXTRATO COM INDICADORES ORÇAMENTÁRIOS -->
         <div class="premium-card overflow-hidden">
             <div class="p-8 border-b border-slate-100 bg-slate-50/50 flex flex-wrap justify-between items-center gap-4">
                 <div class="flex items-center gap-4">
@@ -182,9 +195,20 @@
                         <i data-lucide="chevron-right" class="w-5 h-5"></i>
                     </button>
                 </div>
-                <div class="text-right">
-                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total no Período</p>
-                    <h4 class="text-2xl font-black text-rose-500 tracking-tighter">{{ formatarMoeda(totalMes) }}</h4>
+                
+                <div class="flex gap-6 items-end">
+                    <div class="text-right">
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Status do Mês</p>
+                        <div class="flex gap-3 text-xs font-bold uppercase tracking-wider">
+                            <span class="text-emerald-500 bg-emerald-50 px-2 py-1 rounded-lg">Pago: {{ formatarMoeda(totalPago) }}</span>
+                            <span class="text-amber-500 bg-amber-50 px-2 py-1 rounded-lg">A Pagar: {{ formatarMoeda(totalPendente) }}</span>
+                        </div>
+                    </div>
+                    <div class="w-px h-10 bg-slate-200 hidden md:block"></div>
+                    <div class="text-right">
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Orçamento Projetado</p>
+                        <h4 class="text-2xl font-black text-rose-500 tracking-tighter">{{ formatarMoeda(totalMes) }}</h4>
+                    </div>
                 </div>
             </div>
 
@@ -196,10 +220,20 @@
                     </div>
                     <table class="w-full text-left">
                         <tbody class="text-sm font-semibold text-slate-600">
-                            <tr v-for="d in itens" :key="d.id" class="border-b border-slate-50 hover:bg-slate-50/20 transition-colors group">
-                                <td class="p-8 w-32">{{ formatarData(d.purchase_date || d.date) }}</td>
+                            <!-- Linha com coloração sutil se estiver pendente -->
+                            <tr v-for="d in itens" :key="d.id" class="border-b border-slate-50 transition-colors group" :class="d.is_paid === 0 ? 'bg-amber-50/20 hover:bg-amber-50/50' : 'hover:bg-slate-50/50'">
+                                <td class="p-8 w-32">
+                                    <div class="flex flex-col gap-1">
+                                        <span>{{ formatarData(d.purchase_date || d.date) }}</span>
+                                        <!-- Data de vencimento realce caso seja diferente da compra (Parcelas/Futuro) -->
+                                        <span v-if="d.date !== d.purchase_date && d.is_paid === 0" class="text-[9px] font-black text-amber-500 uppercase">Vence: {{ formatarData(d.date) }}</span>
+                                    </div>
+                                </td>
                                 <td class="p-8">
-                                    <div class="font-black text-slate-800 uppercase text-xs">{{ d.description }}</div>
+                                    <div class="flex items-center gap-2">
+                                        <div class="font-black text-slate-800 uppercase text-xs">{{ d.description }}</div>
+                                        <span v-if="d.is_paid === 0" class="px-2 py-0.5 bg-amber-100 text-amber-600 rounded text-[8px] font-black uppercase tracking-widest">Pendente</span>
+                                    </div>
                                 </td>
                                 <td class="p-8">
                                     <span v-if="d.subgroup" class="px-3 py-1 bg-slate-100 rounded-lg text-[9px] font-black uppercase text-slate-500">{{ d.subgroup }}</span>
@@ -210,9 +244,19 @@
                                         {{ d.account_name }}
                                     </div>
                                 </td>
-                                <td class="p-8 text-right font-black text-slate-700 text-sm w-40">{{ formatarMoeda(d.amount) }}</td>
-                                <!-- Coluna de Ações com Caneta e Lixeira -->
-                                <td class="p-8 text-right w-28 whitespace-nowrap">
+                                <td class="p-8 text-right font-black text-sm w-40" :class="d.is_paid === 0 ? 'text-amber-600' : 'text-slate-700'">
+                                    {{ formatarMoeda(d.amount) }}
+                                </td>
+                                <td class="p-8 text-right w-36 whitespace-nowrap">
+                                    <!-- Botão de Dar Baixa (Check) -->
+                                    <button v-if="d.is_paid === 0" @click="alternarStatus(d.id)" class="p-2 text-amber-400 bg-white border border-slate-100 shadow-sm hover:border-emerald-200 hover:text-emerald-500 rounded-xl transition-all mr-1" title="Confirmar Pagamento">
+                                        <i data-lucide="check-circle" class="w-4 h-4"></i>
+                                    </button>
+                                    <button v-else @click="alternarStatus(d.id)" class="p-2 text-slate-300 hover:text-amber-500 transition-all mr-1" title="Desfazer Pagamento (Marcar como Pendente)">
+                                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                                    </button>
+
+                                    <!-- Editar e Excluir Clássicos -->
                                     <button @click="abrirEdicao(d)" class="p-2 text-slate-300 hover:text-indigo-600 transition-all mr-1" title="Editar">
                                         <i data-lucide="edit-2" class="w-4 h-4"></i>
                                     </button>
@@ -240,7 +284,6 @@
                     </div>
                     
                     <div class="p-8 space-y-6">
-                        <!-- Alerta Amigável para Despesas Parceladas -->
                         <div v-if="modalEdit.form.installment_group_id" class="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-start gap-3 mb-2">
                             <i data-lucide="alert-circle" class="w-5 h-5 text-amber-500 mt-0.5"></i>
                             <div>
@@ -259,7 +302,7 @@
                                 <input v-model="modalEdit.form.amount" type="number" step="0.01" class="premium-input">
                             </div>
                             <div class="input-group">
-                                <label>Data do Lançamento / Vencimento</label>
+                                <label>Data do Vencimento / Execução</label>
                                 <input v-model="modalEdit.form.date" type="date" class="premium-input">
                             </div>
                             <div class="input-group">
@@ -274,12 +317,18 @@
                                     <option v-for="cat in categorias" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
                                 </select>
                             </div>
-                            <div class="input-group md:col-span-2">
+                            <div class="input-group">
                                 <label>Subgrupo</label>
                                 <select v-model="modalEdit.form.subgroup" class="premium-input">
                                     <option value="">Nenhum / Opcional</option>
                                     <option v-for="sub in subgruposEditFormatados" :key="sub" :value="sub">{{ sub }}</option>
                                 </select>
+                            </div>
+                            <div class="input-group flex items-end pb-2">
+                                <label class="flex items-center gap-3 cursor-pointer">
+                                    <input type="checkbox" v-model="modalEdit.form.is_paid" class="w-5 h-5 rounded-lg text-emerald-500 border-slate-300">
+                                    <span class="text-xs font-black uppercase text-slate-600">Marcado como Pago</span>
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -295,7 +344,7 @@
     </div>
 
     <script>
-        const { createApp, ref, onMounted, computed, nextTick } = Vue;
+        const { createApp, ref, onMounted, computed, nextTick, watch } = Vue;
 
         createApp({
             setup() {
@@ -308,20 +357,31 @@
                 const mesReferencia = ref(hoje.getMonth() + 1);
                 const anoReferencia = ref(hoje.getFullYear());
 
-                // FORMULÁRIO PRINCIPAL (NOVO LANÇAMENTO)
                 const form = ref({
                     description: '', amount: null,
                     due_date: new Date().toISOString().substr(0, 10),
                     purchase_date: new Date().toISOString().substr(0, 10),
                     account_id: '', category_id: '', subgroup: '',
-                    is_credit: false, installments: 1
+                    is_credit: false, installments: 1, is_paid: true // Padrão: Pago
                 });
 
-                // FORMULÁRIO SECUNDÁRIO (EDIÇÃO)
+                // A mágica da UI: Se marcar crédito, joga para pendente automaticamente
+                watch(() => form.value.is_credit, (novoValor) => {
+                    if (novoValor) {
+                        form.value.is_paid = false;
+                    } else {
+                        form.value.is_paid = true;
+                    }
+                });
+
                 const modalEdit = ref({ show: false, form: {} });
 
                 const nomeMesReferencia = computed(() => new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date(anoReferencia.value, mesReferencia.value - 1)));
+                
+                // Divisão do Orçamento (Projetado = Tudo | Pago = is_paid 1 | Pendente = is_paid 0)
                 const totalMes = computed(() => despesas.value.reduce((acc, curr) => acc + curr.amount, 0));
+                const totalPago = computed(() => despesas.value.filter(d => d.is_paid === 1).reduce((acc, curr) => acc + curr.amount, 0));
+                const totalPendente = computed(() => despesas.value.filter(d => d.is_paid === 0).reduce((acc, curr) => acc + curr.amount, 0));
 
                 const despesasAgrupadas = computed(() => {
                     const grupos = {};
@@ -333,7 +393,6 @@
                     return grupos;
                 });
 
-                // Lógica unificada para tratar JSON de Subgrupos do Banco
                 const parserSubgrupos = (catId) => {
                     const cat = categorias.value.find(c => c.id === catId);
                     if (!cat || !cat.subgroups) return [];
@@ -389,10 +448,18 @@
                         });
                         if (res.ok) {
                             form.value.description = ''; form.value.amount = null; form.value.subgroup = '';
-                            form.value.is_credit = false; form.value.installments = 1;
+                            form.value.is_credit = false; form.value.installments = 1; form.value.is_paid = true;
                             await carregarDados();
                         } else { alert("Erro no servidor."); }
                     } catch (e) { alert("Erro de conexão."); } finally { loading.value = false; }
+                };
+
+                // Ação ultra-rápida de Confirmar Pagamento
+                const alternarStatus = async (id) => {
+                    try {
+                        await fetch(`http://localhost:3000/api/despesas/${id}/status`, { method: 'PATCH' });
+                        carregarDados();
+                    } catch (e) { console.error("Erro ao alterar status"); }
                 };
 
                 const excluirDespesa = async (id) => {
@@ -401,22 +468,16 @@
                     carregarDados();
                 };
 
-                // --- FUNÇÕES DE EDIÇÃO (UPDATE) ---
                 const abrirEdicao = (d) => {
-                    modalEdit.value.form = { ...d };
+                    modalEdit.value.form = { ...d, is_paid: d.is_paid === 1 };
                     modalEdit.value.show = true;
                     nextTick(() => lucide.createIcons());
                 };
 
-                const fecharEdicao = () => {
-                    modalEdit.value.show = false;
-                };
+                const fecharEdicao = () => { modalEdit.value.show = false; };
 
                 const salvarEdicao = async () => {
-                    if (!modalEdit.value.form.description || !modalEdit.value.form.amount || !modalEdit.value.form.account_id) {
-                        alert("Os campos Descrição, Valor e Conta são obrigatórios.");
-                        return;
-                    }
+                    if (!modalEdit.value.form.description || !modalEdit.value.form.amount || !modalEdit.value.form.account_id) return;
                     loading.value = true;
                     try {
                         const res = await fetch(`http://localhost:3000/api/despesas/${modalEdit.value.form.id}`, {
@@ -425,16 +486,9 @@
                             body: JSON.stringify(modalEdit.value.form)
                         });
                         if (res.ok) {
-                            fecharEdicao();
-                            await carregarDados();
-                        } else {
-                            alert("Erro ao atualizar o lançamento no servidor.");
+                            fecharEdicao(); await carregarDados();
                         }
-                    } catch (e) {
-                        alert("Erro de conexão com o servidor.");
-                    } finally {
-                        loading.value = false;
-                    }
+                    } catch (e) { alert("Erro de conexão."); } finally { loading.value = false; }
                 };
 
                 const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -447,9 +501,9 @@
                 onMounted(carregarDados);
 
                 return { 
-                    loading, contas, categorias, despesas, form, subgruposFormatados, totalMes,
+                    loading, contas, categorias, despesas, form, subgruposFormatados, totalMes, totalPago, totalPendente,
                     mesReferencia, anoReferencia, nomeMesReferencia, despesasAgrupadas,
-                    mudarMes, calcularTotalGrupo, onCategoryChange, salvarDespesa, excluirDespesa, 
+                    mudarMes, calcularTotalGrupo, onCategoryChange, salvarDespesa, excluirDespesa, alternarStatus,
                     formatarMoeda, formatarData,
                     modalEdit, abrirEdicao, fecharEdicao, salvarEdicao, subgruposEditFormatados
                 };
