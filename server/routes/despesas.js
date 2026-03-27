@@ -28,7 +28,7 @@ router.get('/', (req, res) => {
 });
 
 /**
- * POST: Criar despesa (Com inteligência de Pendente/Pago)
+ * POST: Criar despesa (Confia 100% no Frontend)
  */
 router.post('/', (req, res) => {
     const { 
@@ -41,10 +41,10 @@ router.post('/', (req, res) => {
         const valorParcela = amount / numParcelas;
         const groupId = is_credit && numParcelas > 1 ? `GRP_${Date.now()}` : null;
         
-        // Se for crédito, o status é SEMPRE 0 (Pendente). Se for débito/dinheiro, respeita o toggle.
-        const statusPagamento = is_credit ? 0 : (is_paid ? 1 : 0);
+        // Agora o backend apenas respeita a flag is_paid que vem da tela, 
+        // sem forçar nada por conta do cartão de crédito.
+        const statusPagamento = is_paid ? 1 : 0;
         
-        // Se não for crédito, o vencimento é o dia da compra (ou a data futura informada)
         const dataReferencia = is_credit ? due_date : purchase_date;
 
         const stmt = db.prepare(`

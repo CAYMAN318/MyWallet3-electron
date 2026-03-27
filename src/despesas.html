@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -50,12 +50,6 @@
             box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.08);
         }
 
-        .premium-input:disabled {
-            background-color: #f1f5f9;
-            color: #94a3b8;
-            cursor: not-allowed;
-        }
-
         .btn-confirm {
             background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
             color: white;
@@ -98,7 +92,6 @@
             </div>
         </div>
 
-        <!-- FORMULÁRIO -->
         <div class="premium-card p-10 mb-10">
             <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
                 
@@ -141,7 +134,6 @@
                     </select>
                 </div>
 
-                <!-- LINHA DE CONTROLE DE PAGAMENTO E CRÉDITO -->
                 <div class="md:col-span-12 flex flex-wrap items-center gap-6 p-5 bg-slate-50/50 rounded-2xl border border-slate-100">
                     <label class="flex items-center gap-3 cursor-pointer group">
                         <input type="checkbox" v-model="form.is_credit" class="w-5 h-5 rounded-lg text-indigo-600 border-slate-300 focus:ring-indigo-500">
@@ -150,15 +142,15 @@
                     
                     <div class="h-6 w-px bg-slate-200 hidden md:block"></div>
                     
-                    <label class="flex items-center gap-3" :class="form.is_credit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer group'">
-                        <input type="checkbox" v-model="form.is_paid" :disabled="form.is_credit" class="w-5 h-5 rounded-lg text-emerald-500 border-slate-300 focus:ring-emerald-500 disabled:bg-slate-200">
-                        <span class="text-[11px] font-black uppercase tracking-widest transition-colors" :class="form.is_paid ? 'text-emerald-600' : 'text-amber-500'">
-                            {{ form.is_paid ? 'Já foi pago (Dinheiro/Débito)' : 'Agendado / Pendente' }}
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" v-model="form.is_paid" class="w-5 h-5 rounded-lg text-emerald-500 border-slate-300 focus:ring-emerald-500">
+                        <span class="text-[11px] font-black uppercase tracking-widest transition-colors flex items-center gap-2" :class="form.is_paid ? 'text-emerald-600' : 'text-amber-500'">
+                            {{ form.is_paid ? 'Consolidado / Já Pago' : 'Agendado / Pendente' }}
+                            <span v-if="isItemMatriz" class="px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded text-[9px] font-black uppercase tracking-widest" title="Item da Matriz">Matriz</span>
                         </span>
                     </label>
                 </div>
 
-                <!-- Seção Crédito -->
                 <transition name="fade-slide">
                     <div v-if="form.is_credit" class="md:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-8 p-8 credit-section rounded-[2rem]">
                         <div class="input-group">
@@ -180,7 +172,6 @@
             </div>
         </div>
 
-        <!-- EXTRATO COM INDICADORES ORÇAMENTÁRIOS -->
         <div class="premium-card overflow-hidden">
             <div class="p-8 border-b border-slate-100 bg-slate-50/50 flex flex-wrap justify-between items-center gap-4">
                 <div class="flex items-center gap-4">
@@ -220,12 +211,10 @@
                     </div>
                     <table class="w-full text-left">
                         <tbody class="text-sm font-semibold text-slate-600">
-                            <!-- Linha com coloração sutil se estiver pendente -->
                             <tr v-for="d in itens" :key="d.id" class="border-b border-slate-50 transition-colors group" :class="d.is_paid === 0 ? 'bg-amber-50/20 hover:bg-amber-50/50' : 'hover:bg-slate-50/50'">
                                 <td class="p-8 w-32">
                                     <div class="flex flex-col gap-1">
                                         <span>{{ formatarData(d.purchase_date || d.date) }}</span>
-                                        <!-- Data de vencimento realce caso seja diferente da compra (Parcelas/Futuro) -->
                                         <span v-if="d.date !== d.purchase_date && d.is_paid === 0" class="text-[9px] font-black text-amber-500 uppercase">Vence: {{ formatarData(d.date) }}</span>
                                     </div>
                                 </td>
@@ -248,7 +237,6 @@
                                     {{ formatarMoeda(d.amount) }}
                                 </td>
                                 <td class="p-8 text-right w-36 whitespace-nowrap">
-                                    <!-- Botão de Dar Baixa (Check) -->
                                     <button v-if="d.is_paid === 0" @click="alternarStatus(d.id)" class="p-2 text-amber-400 bg-white border border-slate-100 shadow-sm hover:border-emerald-200 hover:text-emerald-500 rounded-xl transition-all mr-1" title="Confirmar Pagamento">
                                         <i data-lucide="check-circle" class="w-4 h-4"></i>
                                     </button>
@@ -256,7 +244,6 @@
                                         <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
                                     </button>
 
-                                    <!-- Editar e Excluir Clássicos -->
                                     <button @click="abrirEdicao(d)" class="p-2 text-slate-300 hover:text-indigo-600 transition-all mr-1" title="Editar">
                                         <i data-lucide="edit-2" class="w-4 h-4"></i>
                                     </button>
@@ -271,7 +258,6 @@
             </div>
         </div>
 
-        <!-- MODAL DE EDIÇÃO -->
         <transition name="fade-slide">
             <div v-if="modalEdit.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
                 <div class="bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col border border-slate-100">
@@ -352,6 +338,7 @@
                 const contas = ref([]);
                 const categorias = ref([]);
                 const despesas = ref([]);
+                const checklistConfig = ref([]); // Guarda as configurações da Matriz
                 
                 const hoje = new Date();
                 const mesReferencia = ref(hoje.getMonth() + 1);
@@ -363,15 +350,6 @@
                     purchase_date: new Date().toISOString().substr(0, 10),
                     account_id: '', category_id: '', subgroup: '',
                     is_credit: false, installments: 1, is_paid: true // Padrão: Pago
-                });
-
-                // A mágica da UI: Se marcar crédito, joga para pendente automaticamente
-                watch(() => form.value.is_credit, (novoValor) => {
-                    if (novoValor) {
-                        form.value.is_paid = false;
-                    } else {
-                        form.value.is_paid = true;
-                    }
                 });
 
                 const modalEdit = ref({ show: false, form: {} });
@@ -412,17 +390,38 @@
 
                 const carregarDados = async () => {
                     try {
-                        const [resC, resD, resT] = await Promise.all([
+                        const [resC, resD, resT, resCheck] = await Promise.all([
                             fetch('http://localhost:3000/api/configuracoes?type=Conta'),
                             fetch('http://localhost:3000/api/configuracoes?type=GrupoDespesa'),
-                            fetch(`http://localhost:3000/api/despesas?mes=${mesReferencia.value}&ano=${anoReferencia.value}`)
+                            fetch(`http://localhost:3000/api/despesas?mes=${mesReferencia.value}&ano=${anoReferencia.value}`),
+                            fetch('http://localhost:3000/api/checklist/config') // Puxa os itens da Matriz
                         ]);
                         contas.value = await resC.json();
                         categorias.value = await resD.json();
                         despesas.value = await resT.json();
+                        checklistConfig.value = await resCheck.json();
                         nextTick(() => lucide.createIcons());
                     } catch (e) { console.error(e); }
                 };
+
+                // Verifica se a seleção atual do formulário é um item controlado pela Matriz
+                const isItemMatriz = computed(() => {
+                    if (!form.value.category_id) return false;
+                    const catId = form.value.category_id;
+                    const sub = form.value.subgroup || '';
+                    return checklistConfig.value.some(item => 
+                        item.category_id === catId && 
+                        (item.subgroup_name || '').toLowerCase() === sub.toLowerCase()
+                    );
+                });
+
+                // A mágica da UI: Auto-Toggle de Pagamento baseado na Matriz
+                watch(() => form.value.category_id, () => {
+                    form.value.is_paid = !isItemMatriz.value;
+                });
+                watch(() => form.value.subgroup, () => {
+                    form.value.is_paid = !isItemMatriz.value;
+                });
 
                 const mudarMes = (direcao) => {
                     let novaData = new Date(anoReferencia.value, mesReferencia.value - 1 + direcao, 1);
@@ -454,7 +453,6 @@
                     } catch (e) { alert("Erro de conexão."); } finally { loading.value = false; }
                 };
 
-                // Ação ultra-rápida de Confirmar Pagamento
                 const alternarStatus = async (id) => {
                     try {
                         await fetch(`http://localhost:3000/api/despesas/${id}/status`, { method: 'PATCH' });
@@ -504,7 +502,7 @@
                     loading, contas, categorias, despesas, form, subgruposFormatados, totalMes, totalPago, totalPendente,
                     mesReferencia, anoReferencia, nomeMesReferencia, despesasAgrupadas,
                     mudarMes, calcularTotalGrupo, onCategoryChange, salvarDespesa, excluirDespesa, alternarStatus,
-                    formatarMoeda, formatarData,
+                    formatarMoeda, formatarData, isItemMatriz,
                     modalEdit, abrirEdicao, fecharEdicao, salvarEdicao, subgruposEditFormatados
                 };
             }
