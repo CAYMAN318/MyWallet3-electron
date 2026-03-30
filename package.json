@@ -1,6 +1,6 @@
 {
   "name": "mywallet3-electron",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Gerenciador Financeiro Pessoal Local com Electron",
   "main": "main.js",
   "scripts": {

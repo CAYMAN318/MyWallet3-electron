@@ -39,21 +39,21 @@ db.pragma('foreign_keys = ON');
 
 /**
  * MOTOR DE MIGRAÇÃO (AUTO-REPARO)
+ * Checa dinamicamente se as colunas criadas em versões mais novas
+ * existem no banco do usuário. Se não existirem, ele injeta (ALTER TABLE).
  */
 const garantirIntegridadeDoEsquema = () => {
     const tabelas = {
-        Transactions: [
+        'Transactions': [
             { name: 'purchase_date', type: 'TEXT' },
+            { name: 'installment_group_id', type: 'TEXT' },
             { name: 'subgroup', type: 'TEXT' },
-            { name: 'is_paid', type: 'INTEGER DEFAULT 0' },
-            { name: 'installment_group_id', type: 'TEXT' }
+            { name: 'is_paid', type: 'INTEGER DEFAULT 0' }
         ],
-        Categories: [
+        'Categories': [
             { name: 'subgroups', type: 'TEXT DEFAULT ""' },
-            { name: 'color', type: 'TEXT DEFAULT "#6366f1"' }
-        ],
-        Accounts: [
-            { name: 'is_credit_card', type: 'INTEGER DEFAULT 0' }
+            { name: 'color', type: 'TEXT DEFAULT "#ef4444"' },
+            { name: 'budget_limit', type: 'REAL DEFAULT NULL' } // <-- NOVO: Teto de Gastos
         ]
     };
 

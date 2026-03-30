@@ -20,9 +20,6 @@ router.get('/', (req, res) => {
         // Data de corte para histórico (6 meses atrás)
         const mesesHistorico = 6;
         const dataCorteHistorico = new Date(anoAtual, mesAtual - mesesHistorico + 1, 1).toISOString().split('T')[0];
-        // Data de corte para a MÉDIA (últimos 6 meses)
-        const dataCorteMedia = new Date(anoAtual, mesAtual - 6, 1).toISOString().split('T')[0];
-
 
         // --- 1. CONSULTAS AO BANCO ---
         
@@ -34,28 +31,25 @@ router.get('/', (req, res) => {
         `;
         const saldoRes = queryAll(sqlSaldo);
 
-
-        // B. Resumo do Mês Atual (Receitas/Despesas)
+        // B. Resumo do Mês Atual (Receitas vs Despesas)
         const sqlMes = `
-            SELECT type, SUM(amount) as total
-            FROM Transactions
-            WHERE date BETWEEN ? AND ?
+            SELECT type, SUM(amount) as total 
+            FROM Transactions 
+            WHERE date >= ? AND date <= ?
             GROUP BY type;
         `;
         const mesRes = queryAll(sqlMes, [inicioMes, fimMes]);
 
-
-        // C. Despesas por Categoria (Mês Atual)
+        // C. Despesas por Categoria (Gráfico Rosca)
         const sqlCat = `
-            SELECT c.name, SUM(t.amount) as total
+            SELECT c.name, SUM(t.amount) as total 
             FROM Transactions t
             JOIN Categories c ON t.category_id = c.id
-            WHERE t.type = 'expense' AND t.date BETWEEN ? AND ?
+            WHERE t.type = 'expense' AND t.date >= ? AND t.date <= ?
             GROUP BY c.name
             ORDER BY total DESC;
         `;
         const catRes = queryAll(sqlCat, [inicioMes, fimMes]);
-
 
         // D. Histórico de Transações para Gráfico (Últimos 6 meses)
         const sqlHist = `
@@ -70,15 +64,39 @@ router.get('/', (req, res) => {
         `;
         const histRes = queryAll(sqlHist, [dataCorteHistorico]);
 
-        // --- 2. PROCESSAMENTO E ESTRUTURAÇÃO ---
-
-        // Estrutura o histórico em um mapa para facilitar o uso no frontend
-        // O frontend espera [{mes:'YYYY-MM', type:'revenue', total:X}, ...]
-        let graficoFinal = histRes;
-
-
-        // --- 3. RESPOSTA ---
+        // E. Alertas de Teto de Gastos (Gestão por Exceção >= 85%)
+        const sqlBudget = `
+            SELECT 
+                c.name as category_name,
+                c.budget_limit,
+                SUM(t.amount) as total_spent
+            FROM Transactions t
+            JOIN Categories c ON t.category_id = c.id
+            WHERE t.type = 'expense' AND t.date >= ? AND t.date <= ? 
+              AND c.budget_limit IS NOT NULL AND c.budget_limit > 0
+            GROUP BY c.id
+        `;
+        const budgetRes = queryAll(sqlBudget, [inicioMes, fimMes]);
         
+        const alertasOrcamento = [];
+        budgetRes.forEach(item => {
+            const spent = item.total_spent || 0;
+            const limit = item.budget_limit;
+            const percentage = (spent / limit) * 100;
+            
+            // Regra de Exceção: Só envia se passou de 85% do teto
+            if (percentage >= 85) {
+                alertasOrcamento.push({
+                    categoria: item.category_name,
+                    gasto: spent,
+                    limite: limit,
+                    percentual: percentage.toFixed(1),
+                    critico: percentage >= 100
+                });
+            }
+        });
+
+        // --- 2. RESPOSTA ---
         const saldoTotal = saldoRes[0]?.total || 0;
         const receitaMes = mesRes.find(r => r.type === 'revenue')?.total || 0;
         const despesaMes = mesRes.find(r => r.type === 'expense')?.total || 0;
@@ -91,12 +109,13 @@ router.get('/', (req, res) => {
                 saldo: receitaMes - despesaMes
             },
             graficoCategorias: catRes,
-            graficoHistorico: graficoFinal
+            graficoHistorico: histRes,
+            alertasOrcamento: alertasOrcamento // <- Novo Array de Alertas
         });
 
     } catch (err) {
         console.error("Erro Dashboard:", err);
-        res.status(500).json({ error: "Erro ao carregar dados do dashboard" });
+        res.status(500).json({ error: err.message });
     }
 });
 

@@ -22,246 +22,337 @@
         .matriz-pago { background-color: #f0fdf4; border-color: #bbf7d0; color: #166534; }
         .matriz-pendente { background-color: #fef2f2; border-color: #fecaca; color: #991b1b; }
         
-        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        /* Animação para os alertas */
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.5s ease, transform 0.5s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(-10px); }
     </style>
 </head>
-<body class="p-6 text-gray-800">
+<body class="p-6">
 
-    <div id="app" class="max-w-6xl mx-auto">
+    <div id="app" class="max-w-7xl mx-auto h-full flex flex-col">
         
-        <!-- Cabeçalho -->
-        <div class="flex justify-between items-center mb-8 border-b border-gray-200 pb-4">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900">Visão Geral</h1>
-                <p class="text-gray-500">Bem-vindo ao MyWallet3. Aqui está o resumo do seu mês.</p>
+                <h1 class="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Centro de Comando</h1>
+                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Visão Estratégica</p>
             </div>
-            <div class="text-sm text-gray-500 font-medium bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100 italic">
-                Hoje: {{ new Date().toLocaleDateString('pt-BR') }}
+            <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-100">
+                <i data-lucide="calendar" class="w-4 h-4 text-indigo-500"></i>
+                <span class="font-black text-slate-700 text-sm uppercase tracking-widest">{{ nomeMesAtual }}</span>
             </div>
+        </header>
+
+        <div v-if="loading" class="flex-1 flex justify-center items-center">
+            <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
         </div>
 
-        <!-- Cards de Resumo -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="card bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-                <div class="flex items-center gap-3 mb-4">
-                    <div class="p-2 bg-emerald-100 text-emerald-600 rounded-xl"><i data-lucide="wallet"></i></div>
-                    <span class="text-sm font-bold text-gray-400 uppercase tracking-wider">Saldo Acumulado</span>
-                </div>
-                <h2 class="text-3xl font-black text-gray-900">{{ formatarMoeda(dados.saldoTotal) }}</h2>
-            </div>
-
-            <div class="card bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-                <div class="flex items-center gap-3 mb-4">
-                    <div class="p-2 bg-blue-100 text-blue-600 rounded-xl"><i data-lucide="trending-up"></i></div>
-                    <span class="text-sm font-bold text-gray-400 uppercase tracking-wider">Receitas no Mês</span>
-                </div>
-                <h2 class="text-3xl font-black text-blue-600">+ {{ formatarMoeda(dados.resumoMes.receitas) }}</h2>
-            </div>
-
-            <div class="card bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-                <div class="flex items-center gap-3 mb-4">
-                    <div class="p-2 bg-red-100 text-red-600 rounded-xl"><i data-lucide="trending-down"></i></div>
-                    <span class="text-sm font-bold text-gray-400 uppercase tracking-wider">Despesas no Mês</span>
-                </div>
-                <h2 class="text-3xl font-black text-red-600">- {{ formatarMoeda(dados.resumoMes.despesas) }}</h2>
-            </div>
-        </div>
-
-        <!-- Gráficos com containers fixos -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-                <h3 class="font-bold text-gray-800 mb-6 flex items-center gap-2">
-                    <i data-lucide="pie-chart" class="text-gray-400"></i> Despesas por Categoria
-                </h3>
-                <!-- Container fixo para evitar loop de resize -->
-                <div class="relative h-[350px] w-full">
-                    <div v-if="!temDadosCategorias" class="absolute inset-0 flex items-center justify-center text-gray-400">
-                        Nenhuma despesa lançada este mês.
+        <div v-else class="space-y-8">
+            
+            <!-- Cards Principais (Totais) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Saldo Atual (Com azul ainda mais suavizado) -->
+                <div class="card bg-gradient-to-br from-blue-400 to-indigo-400 rounded-3xl p-6 text-white shadow-lg shadow-indigo-100 flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute -right-6 -top-6 w-32 h-32 bg-white opacity-10 rounded-full"></div>
+                    <div class="flex justify-between items-start relative z-10">
+                        <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                            <i data-lucide="wallet" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <span class="bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest backdrop-blur-md text-white">Caixa Geral</span>
                     </div>
-                    <canvas id="chartCategorias"></canvas>
+                    <div class="mt-8 relative z-10">
+                        <p class="text-indigo-50 text-xs font-bold uppercase tracking-widest mb-1">Saldo Acumulado</p>
+                        <h2 class="text-3xl font-black tracking-tighter">{{ formatarMoeda(dados.saldoTotal) }}</h2>
+                    </div>
+                </div>
+
+                <!-- Receitas do Mês -->
+                <div class="card bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between">
+                    <div class="flex justify-between items-start">
+                        <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center">
+                            <i data-lucide="trending-up" class="w-6 h-6 text-emerald-500"></i>
+                        </div>
+                        <span class="bg-slate-50 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">{{ nomeMesAtual }}</span>
+                    </div>
+                    <div class="mt-8">
+                        <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Entradas</p>
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter">+ {{ formatarMoeda(dados.resumoMes.receitas) }}</h2>
+                    </div>
+                </div>
+
+                <!-- Despesas do Mês -->
+                <div class="card bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between">
+                    <div class="flex justify-between items-start">
+                        <div class="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center">
+                            <i data-lucide="trending-down" class="w-6 h-6 text-rose-500"></i>
+                        </div>
+                        <span class="bg-slate-50 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">{{ nomeMesAtual }}</span>
+                    </div>
+                    <div class="mt-8">
+                        <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Saídas</p>
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter">- {{ formatarMoeda(dados.resumoMes.despesas) }}</h2>
+                    </div>
                 </div>
             </div>
 
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-                <h3 class="font-bold text-gray-800 mb-6 flex items-center gap-2">
-                    <i data-lucide="bar-chart-3" class="text-gray-400"></i> Histórico 6 Meses
-                </h3>
-                <!-- Container fixo para evitar loop de resize -->
-                <div class="relative h-[350px] w-full">
-                    <canvas id="chartHistorico"></canvas>
+            <!-- Gráficos Analíticos (Movidos para cima) -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- Distribuição por Categoria (Rosca) -->
+                <div class="card bg-white rounded-3xl p-8 border border-slate-100 shadow-sm flex flex-col">
+                    <h3 class="font-black text-slate-800 uppercase text-xs tracking-widest mb-6">Distribuição de Gastos</h3>
+                    
+                    <div v-if="!temDadosCategorias" class="flex-1 flex flex-col items-center justify-center text-slate-400">
+                        <i data-lucide="pie-chart" class="w-12 h-12 opacity-20 mb-3"></i>
+                        <p class="text-xs font-bold uppercase tracking-widest">Sem despesas no mês</p>
+                    </div>
+                    <div v-else class="relative h-64 w-full">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
                 </div>
+
+                <!-- Evolução Histórica (Barras) -->
+                <div class="card bg-white rounded-3xl p-8 border border-slate-100 shadow-sm flex flex-col">
+                    <h3 class="font-black text-slate-800 uppercase text-xs tracking-widest mb-6">Evolução Semestral</h3>
+                    <div class="relative h-64 w-full">
+                        <canvas id="historyChart"></canvas>
+                    </div>
+                </div>
+
             </div>
-        </div>
 
-        <!-- MATRIZ DE COMPROMISSOS -->
-        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-12">
-            <div class="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-                <div>
-                    <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <i data-lucide="clipboard-check" class="text-gray-400"></i> Matriz de Compromissos
-                    </h3>
-                    <p class="text-sm text-gray-500">Acompanhamento de gastos fixos para o mês de {{ nomeMesAtual }}</p>
-                </div>
-                <div class="flex gap-4 text-xs font-bold uppercase tracking-widest">
-                    <span class="flex items-center gap-1 text-emerald-600"><span class="w-2 h-2 rounded-full bg-emerald-600"></span> Pago</span>
-                    <span class="flex items-center gap-1 text-amber-500"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Lançado</span>
-                    <span class="flex items-center gap-1 text-red-600"><span class="w-2 h-2 rounded-full bg-red-600"></span> Aguardando</span>
-                </div>
-            </div>
-
-            <div class="p-6">
-                <div v-if="matriz.length === 0" class="text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-                    <p class="text-gray-400">Nenhum compromisso configurado na Matriz.</p>
-                    <p class="text-xs text-gray-400 mt-1">Configure em Configurações > Categorias</p>
+            <!-- MATRIZ DE COMPROMISSOS (Movida para o meio) -->
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                            <i data-lucide="clipboard-check" class="w-5 h-5 text-indigo-500"></i> Matriz de Compromissos
+                        </h3>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Status operacional fixo de {{ nomeMesAtual }}</p>
+                    </div>
+                    <div class="flex gap-4 text-[10px] font-black uppercase tracking-widest">
+                        <span class="flex items-center gap-1.5 text-emerald-600"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-sm"></span> Pago</span>
+                        <span class="flex items-center gap-1.5 text-amber-500"><span class="w-2 h-2 rounded-full bg-amber-500 shadow-sm"></span> Pendente</span>
+                        <span class="flex items-center gap-1.5 text-rose-600"><span class="w-2 h-2 rounded-full bg-rose-500 shadow-sm"></span> Aguardando</span>
+                    </div>
                 </div>
 
-                <div v-else class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 custom-scroll overflow-y-auto max-h-[400px]">
-                    <div v-for="item in matriz" :key="item.subgroup_name" 
-                         class="matriz-item p-4 rounded-2xl border-2 flex flex-col items-center justify-center text-center gap-2 shadow-sm"
-                         :class="{
-                             'matriz-pago': item.status === 'pago',
-                             'bg-amber-50 border-amber-200 text-amber-800': item.status === 'pendente_lancado',
-                             'matriz-pendente': item.status === 'pendente_ausente'
-                         }">
-                        
-                        <div class="p-2 rounded-full" 
+                <div class="p-8">
+                    <div v-if="matriz.length === 0" class="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                        <p class="text-slate-400 font-bold text-sm">Nenhuma posição defensiva configurada na Matriz.</p>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-2">Configure em Configurações > Despesas</p>
+                    </div>
+
+                    <div v-else class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 custom-scroll overflow-y-auto max-h-[400px] pr-2">
+                        <div v-for="item in matriz" :key="item.subgroup_name" 
+                             class="matriz-item p-5 rounded-2xl border-2 flex flex-col items-center justify-center text-center gap-3 shadow-sm"
                              :class="{
-                                 'bg-emerald-100 text-emerald-600': item.status === 'pago',
-                                 'bg-amber-100 text-amber-600': item.status === 'pendente_lancado',
-                                 'bg-red-100 text-red-600': item.status === 'pendente_ausente'
+                                 'matriz-pago': item.status === 'pago',
+                                 'bg-amber-50 border-amber-200 text-amber-800': item.status === 'pendente_lancado',
+                                 'matriz-pendente': item.status === 'pendente_ausente'
                              }">
-                            <i :data-lucide="item.status === 'pago' ? 'check' : (item.status === 'pendente_lancado' ? 'alert-circle' : 'clock')" class="w-5 h-5"></i>
-                        </div>
-                        
-                        <div class="leading-tight">
-                            <p class="text-[10px] font-bold uppercase opacity-60">{{ item.category_name }}</p>
-                            <p class="font-black text-sm">{{ item.subgroup_name }}</p>
-                        </div>
+                            
+                            <div class="p-2.5 rounded-2xl shadow-sm border" 
+                                 :class="{
+                                     'bg-emerald-100 border-emerald-200 text-emerald-600': item.status === 'pago',
+                                     'bg-amber-100 border-amber-200 text-amber-600': item.status === 'pendente_lancado',
+                                     'bg-rose-100 border-rose-200 text-rose-600': item.status === 'pendente_ausente'
+                                 }">
+                                <i :data-lucide="item.status === 'pago' ? 'check' : (item.status === 'pendente_lancado' ? 'alert-circle' : 'clock')" class="w-5 h-5"></i>
+                            </div>
+                            
+                            <div class="leading-tight">
+                                <p class="text-[9px] font-black uppercase tracking-widest opacity-60">{{ item.category_name }}</p>
+                                <p class="font-black text-sm mt-0.5">{{ item.subgroup_name }}</p>
+                            </div>
 
-                        <p v-if="item.status === 'pago'" class="text-[11px] font-bold bg-emerald-200/50 text-emerald-700 px-2 py-0.5 rounded-full mt-1">
-                            {{ formatarMoeda(item.valor) }}
-                        </p>
-                        <p v-else-if="item.status === 'pendente_lancado'" class="text-[11px] font-bold bg-amber-200/50 text-amber-700 px-2 py-0.5 rounded-full mt-1">
-                            {{ formatarMoeda(item.valor) }}
-                        </p>
-                        <p v-else class="text-[10px] font-bold uppercase tracking-tighter opacity-70">Aguardando</p>
+                            <p v-if="item.status === 'pago'" class="text-[10px] font-black uppercase tracking-wider bg-emerald-200/50 border border-emerald-200 text-emerald-700 px-3 py-1 rounded-full w-full">
+                                {{ formatarMoeda(item.valor) }}
+                            </p>
+                            <p v-else-if="item.status === 'pendente_lancado'" class="text-[10px] font-black uppercase tracking-wider bg-amber-200/50 border border-amber-200 text-amber-700 px-3 py-1 rounded-full w-full">
+                                {{ formatarMoeda(item.valor) }}
+                            </p>
+                            <p v-else class="text-[9px] font-black uppercase tracking-widest opacity-70 border border-transparent px-3 py-1">Aguardando</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
+            <!-- GESTÃO POR EXCEÇÃO: ALERTAS DE TETO DE GASTOS (Movido para o final) -->
+            <transition name="fade">
+                <div v-if="alertasOrcamento.length > 0" class="flex flex-col gap-4">
+                    <div v-for="alerta in alertasOrcamento" :key="alerta.categoria" 
+                         class="relative overflow-hidden rounded-2xl border p-5 flex items-center justify-between shadow-sm card"
+                         :class="alerta.critico ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-200'">
+                        
+                        <!-- Barra de Progresso Fundo -->
+                        <div class="absolute inset-0 opacity-10 transition-all duration-1000 ease-out"
+                             :class="alerta.critico ? 'bg-rose-500' : 'bg-amber-500'"
+                             :style="{ width: Math.min(alerta.percentual, 100) + '%' }">
+                        </div>
+
+                        <div class="relative z-10 flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner border"
+                                 :class="alerta.critico ? 'bg-rose-100 border-rose-200 text-rose-600' : 'bg-amber-100 border-amber-200 text-amber-600'">
+                                <i :data-lucide="alerta.critico ? 'alert-octagon' : 'alert-triangle'" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-black uppercase tracking-widest text-[11px]" :class="alerta.critico ? 'text-rose-900' : 'text-amber-900'">
+                                    Grupo: {{ alerta.categoria }}
+                                </h4>
+                                <p class="text-sm font-bold mt-0.5" :class="alerta.critico ? 'text-rose-700' : 'text-amber-700'">
+                                    {{ alerta.critico ? 'Teto Orçamentário Rompido' : 'Atenção ao Limite Definido' }} 
+                                    <span class="opacity-75 font-black">({{ alerta.percentual }}%)</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="relative z-10 text-right">
+                            <p class="text-[9px] font-black uppercase tracking-widest mb-1" :class="alerta.critico ? 'text-rose-500' : 'text-amber-500'">Consumo Atual / Teto Máximo</p>
+                            <p class="font-black text-xl" :class="alerta.critico ? 'text-rose-700' : 'text-amber-800'">
+                                {{ formatarMoeda(alerta.gasto) }} 
+                                <span class="text-sm opacity-50 font-bold">/ {{ formatarMoeda(alerta.limite) }}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+
+        </div>
     </div>
 
     <script>
-        const { createApp, ref, onMounted, computed } = Vue;
+        const { createApp, ref, onMounted, computed, nextTick } = Vue;
 
         createApp({
             setup() {
                 const loading = ref(true);
-                const dados = ref({ 
-                    saldoTotal: 0, 
-                    resumoMes: { receitas: 0, despesas: 0 }, 
-                    graficoCategorias: [], 
-                    graficoHistorico: [] 
+                const dados = ref({
+                    saldoTotal: 0,
+                    resumoMes: { receitas: 0, despesas: 0, saldo: 0 },
+                    graficoCategorias: [],
+                    graficoHistorico: []
                 });
+                
                 const matriz = ref([]);
-                const nomeMesAtual = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date());
-
-                // Armazenamento das instâncias dos gráficos
+                const alertasOrcamento = ref([]); // Novo Ref para os Alertas
                 let chartCatInstance = null;
                 let chartHistInstance = null;
+
+                const hoje = new Date();
+                const nomeMesAtual = computed(() => {
+                    return new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(hoje);
+                });
 
                 const temDadosCategorias = computed(() => dados.value.graficoCategorias.length > 0);
 
                 const carregarDados = async () => {
-                    loading.value = true;
                     try {
-                        const hoje = new Date();
-                        const mes = hoje.getMonth() + 1;
-                        const ano = hoje.getFullYear();
-
-                        const [resDash, resCheck] = await Promise.all([
+                        const [resDash, resMatriz] = await Promise.all([
                             fetch('http://localhost:3000/api/dashboard'),
-                            fetch(`http://localhost:3000/api/checklist/status?mes=${mes}&ano=${ano}`)
+                            fetch(`http://localhost:3000/api/checklist/status?mes=${hoje.getMonth() + 1}&ano=${hoje.getFullYear()}`)
                         ]);
                         
                         dados.value = await resDash.json();
-                        matriz.value = await resCheck.json();
+                        matriz.value = await resMatriz.json();
                         
-                        renderizarGraficos();
-                        setTimeout(() => lucide.createIcons(), 50);
-                    } catch (e) { 
-                        console.error("Erro ao carregar dashboard:", e); 
-                    } finally { 
-                        loading.value = false; 
+                        // Captura os alertas calculados pelo backend
+                        alertasOrcamento.value = dados.value.alertasOrcamento || [];
+                        
+                    } catch (error) {
+                        console.error("Erro ao carregar Dashboard:", error);
+                    } finally {
+                        // Correção da Race Condition: O 'loading' fica falso ANTES do nextTick, 
+                        // garantindo que as divs dos gráficos existam na tela para o Vue desenhar
+                        loading.value = false;
+                        nextTick(() => {
+                            lucide.createIcons();
+                            renderizarGraficos();
+                        });
                     }
                 };
 
                 const renderizarGraficos = () => {
-                    // Gráfico de Categorias (Pizza/Doughnut)
-                    const canvasCat = document.getElementById('chartCategorias');
-                    if (canvasCat) {
-                        const ctxCat = canvasCat.getContext('2d');
+                    Chart.defaults.font.family = 'Inter';
+                    Chart.defaults.color = '#94a3b8';
+
+                    // 1. Gráfico de Categorias (Rosca)
+                    if (temDadosCategorias.value) {
+                        const ctxCat = document.getElementById('categoryChart');
+                        if (!ctxCat) return; // Segurança extra
                         if (chartCatInstance) chartCatInstance.destroy();
+                        
+                        const bgColors = [
+                            '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', 
+                            '#f97316', '#eab308', '#10b981', '#14b8a6', '#0ea5e9', '#64748b'
+                        ];
 
                         chartCatInstance = new Chart(ctxCat, {
                             type: 'doughnut',
                             data: {
                                 labels: dados.value.graficoCategorias.map(c => c.name),
-                                datasets: [{ 
-                                    data: dados.value.graficoCategorias.map(c => c.total), 
-                                    backgroundColor: ['#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#6366f1'], 
-                                    borderWidth: 0 
+                                datasets: [{
+                                    data: dados.value.graficoCategorias.map(c => c.total),
+                                    backgroundColor: bgColors,
+                                    borderWidth: 0,
+                                    hoverOffset: 10
                                 }]
                             },
-                            options: { 
-                                responsive: true, 
-                                maintainAspectRatio: false, 
-                                plugins: { 
-                                    legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } } 
-                                } 
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                cutout: '70%',
+                                plugins: {
+                                    legend: { position: 'right', labels: { boxWidth: 12, usePointStyle: true, font: { weight: 'bold', size: 10 } } },
+                                    tooltip: {
+                                        backgroundColor: 'rgba(15, 23, 42, 0.9)', padding: 12, cornerRadius: 8,
+                                        callbacks: { label: (c) => ` R$ ${c.raw.toFixed(2)}` }
+                                    }
+                                }
                             }
                         });
                     }
 
-                    // Gráfico de Histórico (Barras)
-                    const canvasHist = document.getElementById('chartHistorico');
-                    if (canvasHist) {
-                        const ctxHist = canvasHist.getContext('2d');
+                    // 2. Gráfico Histórico (Barras)
+                    const ctxHist = document.getElementById('historyChart');
+                    if (ctxHist) {
                         if (chartHistInstance) chartHistInstance.destroy();
 
-                        const labels = [...new Set(dados.value.graficoHistorico.map(h => h.mes))];
-                        const receitas = labels.map(l => {
-                            const item = dados.value.graficoHistorico.find(h => h.mes === l && h.type === 'revenue');
+                        const mesesUnicos = [...new Set(dados.value.graficoHistorico.map(d => d.mes))].sort();
+                        const receitas = mesesUnicos.map(m => {
+                            const item = dados.value.graficoHistorico.find(d => d.mes === m && d.type === 'revenue');
                             return item ? item.total : 0;
                         });
-                        const despesas = labels.map(l => {
-                            const item = dados.value.graficoHistorico.find(h => h.mes === l && h.type === 'expense');
+                        const despesas = mesesUnicos.map(m => {
+                            const item = dados.value.graficoHistorico.find(d => d.mes === m && d.type === 'expense');
                             return item ? item.total : 0;
                         });
 
                         chartHistInstance = new Chart(ctxHist, {
                             type: 'bar',
                             data: {
-                                labels: labels.map(l => {
+                                labels: mesesUnicos.map(l => {
                                     const [ano, mes] = l.split('-');
-                                    return new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(new Date(ano, mes - 1));
+                                    return new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(new Date(ano, mes - 1)).toUpperCase();
                                 }),
                                 datasets: [
-                                    { label: 'Receitas', data: receitas, backgroundColor: '#3b82f6', borderRadius: 5 },
-                                    { label: 'Despesas', data: despesas, backgroundColor: '#ef4444', borderRadius: 5 }
+                                    { label: 'Entradas', data: receitas, backgroundColor: '#10b981', borderRadius: 4 },
+                                    { label: 'Saídas', data: despesas, backgroundColor: '#f43f5e', borderRadius: 4 }
                                 ]
                             },
                             options: { 
                                 responsive: true, 
                                 maintainAspectRatio: false, 
                                 scales: { 
-                                    y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
-                                    x: { grid: { display: false } }
+                                    y: { beginAtZero: true, grid: { color: '#f1f5f9', drawBorder: false }, border: { dash: [4, 4] } },
+                                    x: { grid: { display: false, drawBorder: false }, ticks: { font: { weight: 'bold', size: 10 } } }
                                 },
                                 plugins: {
-                                    legend: { position: 'bottom' }
+                                    legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8, font: { weight: 'bold', size: 11 } } }
                                 }
                             }
                         });
@@ -272,7 +363,7 @@
 
                 onMounted(carregarDados);
 
-                return { loading, dados, matriz, nomeMesAtual, temDadosCategorias, formatarMoeda };
+                return { loading, dados, matriz, alertasOrcamento, nomeMesAtual, temDadosCategorias, formatarMoeda };
             }
         }).mount('#app');
     </script>
