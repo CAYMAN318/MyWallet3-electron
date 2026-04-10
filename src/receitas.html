@@ -3,443 +3,382 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyWallet3 - Relatórios</title>
+    <title>MyWallet3 - Receitas</title>
     
     <script src="libs/tailwindcss.js"></script>
     <script src="libs/vue.global.js"></script>
-    <script src="libs/chart.js"></script>
     <script src="libs/lucide.js"></script>
 
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f7fafc; }
-        span.icon-wrapper { display: inline-flex; align-items: center; }
-        .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
-        .fade-enter-from, .fade-leave-to { opacity: 0; }
-        .custom-scroll::-webkit-scrollbar { width: 5px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        
-        .tab-btn {
-            padding: 12px 24px; font-weight: 800; font-size: 13px; text-transform: uppercase;
-            border-radius: 1rem; transition: all 0.3s ease; color: #94a3b8; letter-spacing: 0.05em;
-        }
-        .tab-btn.active {
-            background-color: white; color: #0f172a;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        }
-
-        .filter-select {
-            appearance: none; background-color: #f8fafc; border: 1px solid #e2e8f0;
-            padding: 12px 16px; border-radius: 1rem; font-size: 13px; font-weight: 700;
-            color: #334155; outline: none; transition: border-color 0.2s;
-        }
-        .filter-select:focus { border-color: #3b82f6; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        [v-cloak] { display: none; }
         
         .premium-card {
-            background: white; border-radius: 2rem; border: 1px solid #f1f5f9;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.02);
-        }
-        
-        .chart-container { position: relative; height: 350px; width: 100%; }
-        
-        .pct-box {
-            background: linear-gradient(145deg, #ffffff, #f8fafc);
+            background: white;
+            border-radius: 2.5rem;
             border: 1px solid #f1f5f9;
-            border-radius: 1.5rem;
-            padding: 1.5rem;
-            display: flex; flex-direction: column; justify-content: center;
+            box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.04);
         }
+
+        .input-group label {
+            display: block;
+            font-weight: 900;
+            text-transform: uppercase;
+            font-size: 10px;
+            color: #94a3b8;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+            margin-left: 4px;
+        }
+
+        .premium-input {
+            width: 100%;
+            padding: 14px 20px;
+            border-radius: 1.25rem;
+            border: 1px solid #e2e8f0;
+            background-color: #f8fafc;
+            font-size: 14px;
+            font-weight: 600;
+            color: #334155;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+        }
+
+        .premium-input:focus {
+            background-color: white;
+            border-color: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.08);
+        }
+
+        .btn-confirm {
+            background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+            color: white;
+            padding: 18px;
+            border-radius: 1.5rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .btn-confirm:hover:not(:disabled) {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        .category-header { background-color: #f8fafc; border-left: 4px solid #10b981; }
+        .fade-slide-enter-active, .fade-slide-leave-active { transition: all 0.3s ease; }
+        .fade-slide-enter-from, .fade-slide-leave-to { opacity: 0; transform: translateY(-10px); }
     </style>
 </head>
 <body class="p-6">
 
-    <div id="app" class="max-w-6xl mx-auto h-screen flex flex-col">
+    <div id="app" v-cloak class="max-w-6xl mx-auto">
         
-        <!-- Cabeçalho Principal -->
-        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-6 shrink-0">
+        <!-- Cabeçalho de Página -->
+        <div class="flex justify-between items-center mb-10">
             <div>
-                <h1 class="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Inteligência & BI</h1>
-                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Análise de Dados Financeiros</p>
+                <h1 class="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Fluxo de Entrada</h1>
+                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Gestão de Receitas e Rendimentos</p>
             </div>
-            
-            <div class="bg-slate-200/50 p-1.5 rounded-[1.25rem] flex items-center backdrop-blur-sm shadow-inner">
-                <button @click="abaAtual = 'tendencia'" class="tab-btn" :class="{ 'active': abaAtual === 'tendencia' }">Evolução Analítica</button>
-                <button @click="abaAtual = 'extrato'" class="tab-btn" :class="{ 'active': abaAtual === 'extrato' }">Busca Detalhada</button>
+            <div class="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shadow-inner">
+                <i data-lucide="arrow-up-right" class="w-8 h-8"></i>
             </div>
         </div>
 
-        <transition name="fade" mode="out-in">
-            <div v-if="abaAtual === 'tendencia'" class="grid grid-cols-1 lg:grid-cols-4 gap-8 flex-1 min-h-0">
+        <!-- FORMULÁRIO PRINCIPAL -->
+        <div class="premium-card p-10 mb-10">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
                 
-                <!-- PAINEL ESQUERDO: Filtros e Métricas -->
-                <div class="lg:col-span-1 space-y-6 overflow-y-auto custom-scroll pr-2 pb-10">
-                    
-                    <div class="premium-card p-6 space-y-5">
-                        <div class="flex items-center gap-3 mb-2">
-                            <div class="p-2 bg-blue-50 text-blue-600 rounded-xl"><i data-lucide="filter" class="w-4 h-4"></i></div>
-                            <h3 class="font-black text-sm uppercase tracking-widest text-slate-700">Refinar Visão</h3>
-                        </div>
-
-                        <div class="flex flex-col gap-2">
-                            <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Regime de Leitura</label>
-                            <div class="flex bg-slate-100 p-1 rounded-xl">
-                                <button @click="viewType = 'financeiro'; carregarRelatorioTrend()" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all" :class="viewType === 'financeiro' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'">Caixa (Pagto)</button>
-                                <button @click="viewType = 'consumo'; carregarRelatorioTrend()" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all" :class="viewType === 'consumo' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'">Consumo</button>
-                            </div>
-                        </div>
-
-                        <div class="flex flex-col gap-2">
-                            <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Período de Análise</label>
-                            <select v-model="filtroMeses" @change="onFiltroMesesChange" class="filter-select w-full">
-                                <option value="3">Últimos 3 Meses</option>
-                                <option value="6">Últimos 6 Meses</option>
-                                <option value="12">Últimos 12 Meses</option>
-                                <option value="custom">Período Específico...</option>
-                            </select>
-                        </div>
-
-                        <div v-if="filtroMeses === 'custom'" class="flex flex-col gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                            <input type="date" v-model="datasTrend.inicio" class="filter-select w-full text-xs" @change="carregarRelatorioTrend">
-                            <input type="date" v-model="datasTrend.fim" class="filter-select w-full text-xs" @change="carregarRelatorioTrend">
-                        </div>
-
-                        <div class="flex flex-col gap-2">
-                            <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Filtrar Grupo</label>
-                            <select v-model="filtroCategoria" @change="onCategoriaChange" class="filter-select w-full">
-                                <option value="all">Visão Geral (Todos)</option>
-                                <option v-for="c in categoriasFiltro" :key="c.id" :value="c.id">{{ c.name }}</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="premium-card p-6 border-t-4 border-t-indigo-500">
-                        <h4 class="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-6 flex items-center justify-between">
-                            Médias do Período
-                            <span class="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md text-[9px]">/ {{ divisorMeses }} meses</span>
-                        </h4>
-                        <div class="space-y-4">
-                            <div class="flex justify-between items-end border-b border-slate-50 pb-2">
-                                <span class="text-xs font-bold text-slate-500">Receitas</span>
-                                <span class="text-sm font-black text-emerald-500">{{ formatarMoeda(mediaReceita) }} <span class="text-[10px] text-slate-400 font-normal">/mês</span></span>
-                            </div>
-                            <div class="flex justify-between items-end">
-                                <span class="text-xs font-bold text-slate-500">Despesas</span>
-                                <span class="text-sm font-black text-rose-500">{{ formatarMoeda(mediaDespesa) }} <span class="text-[10px] text-slate-400 font-normal">/mês</span></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="pct-box group hover:border-indigo-200 transition-colors">
-                            <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 leading-tight">Impacto nas<br>Despesas</span>
-                            <div class="flex items-baseline gap-1">
-                                <span class="text-2xl font-black text-slate-700 tracking-tighter">{{ percentualDespesa }}</span>
-                                <span class="text-xs font-bold text-slate-400">%</span>
-                            </div>
-                        </div>
-                        <div class="pct-box group hover:border-emerald-200 transition-colors">
-                            <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 leading-tight">Consumo da<br>Receita Total</span>
-                            <div class="flex items-baseline gap-1">
-                                <span class="text-2xl font-black text-slate-700 tracking-tighter">{{ percentualReceita }}</span>
-                                <span class="text-xs font-bold text-slate-400">%</span>
-                            </div>
-                        </div>
-                    </div>
+                <div class="md:col-span-8 input-group">
+                    <label>Origem / Descrição</label>
+                    <input v-model="form.description" type="text" class="premium-input" placeholder="Ex: Salário, Rendimentos, Pix...">
+                </div>
+                
+                <div class="md:col-span-4 input-group">
+                    <label>Valor (R$)</label>
+                    <input v-model="form.amount" type="number" step="0.01" class="premium-input" placeholder="0,00">
+                </div>
+                
+                <div class="md:col-span-4 input-group">
+                    <label>Data do Recebimento</label>
+                    <input v-model="form.date" type="date" class="premium-input">
                 </div>
 
-                <!-- PAINEL DIREITO: Gráfico Principal -->
-                <div class="lg:col-span-3 flex flex-col min-h-0 pb-10">
-                    <div class="premium-card p-8 flex-1 flex flex-col shadow-lg shadow-slate-200/20">
-                        <div class="flex justify-between items-start mb-8">
-                            <div>
-                                <h2 class="text-xl font-black text-slate-800 uppercase italic tracking-tighter">Histórico Dinâmico</h2>
-                                <p class="text-xs text-slate-400 font-bold uppercase mt-1 tracking-widest">
-                                    {{ viewType === 'consumo' ? 'Radar de Geração de Despesas' : (filtroCategoria === 'all' ? 'Comparativo Entradas vs Saídas' : 'Evolução Específica do Grupo') }}
-                                </p>
-                            </div>
-                            
-                            <div v-if="loading" class="flex gap-2">
-                                <div class="w-2 h-2 rounded-full bg-blue-500 animate-ping"></div>
-                            </div>
-                            <div v-else class="flex gap-4">
-                                <label v-if="filtroCategoria !== 'all' || viewType === 'consumo'" class="flex items-center gap-2 cursor-pointer bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">
-                                    <input type="checkbox" v-model="mostrarReceitas" @change="renderizarChartTrend" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500">
-                                    <span class="text-[10px] font-black uppercase text-slate-600 tracking-wider">Exibir Receitas Base</span>
-                                </label>
-                            </div>
-                        </div>
+                <div class="md:col-span-4 input-group">
+                    <label>Conta Destino</label>
+                    <select v-model="form.account_id" class="premium-input">
+                        <option value="">Nenhuma / Dinheiro</option>
+                        <option v-for="c in contas" :key="c.id" :value="c.id">{{ c.name }}</option>
+                    </select>
+                </div>
 
-                        <div class="flex-1 w-full flex items-center justify-center relative min-h-[350px]">
-                            <div v-if="semDadosTrend && !loading" class="absolute flex flex-col items-center justify-center text-slate-400 z-10">
-                                <i data-lucide="bar-chart-2" class="w-16 h-16 opacity-20 mb-4"></i>
-                                <p class="font-bold uppercase tracking-widest text-xs">Nenhum dado financeiro consolidado neste período.</p>
-                            </div>
-                            <canvas id="trendChart"></canvas>
-                        </div>
+                <div class="md:col-span-4 input-group">
+                    <label>Grupo de Receita</label>
+                    <select v-model="form.category_id" class="premium-input">
+                        <option value="">Selecione...</option>
+                        <option v-for="cat in categorias" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                    </select>
+                </div>
+
+                <!-- Botão de Ação -->
+                <div class="md:col-span-12 pt-4">
+                    <button @click="salvarReceita" :disabled="loading" class="w-full btn-confirm disabled:opacity-50">
+                        {{ loading ? 'Sincronizando...' : 'Confirmar e Lançar Receita' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- EXTRATO COM NAVEGAÇÃO POR MÊS -->
+        <div class="premium-card overflow-hidden">
+            
+            <div class="p-8 border-b border-slate-100 bg-slate-50/50 flex flex-wrap justify-between items-center gap-4">
+                <div class="flex items-center gap-4">
+                    <button @click="mudarMes(-1)" class="p-2 hover:bg-white rounded-xl transition-all border border-slate-200 text-slate-400">
+                        <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                    </button>
+                    <div class="text-center min-w-[150px]">
+                        <h3 class="font-black text-slate-800 uppercase text-sm tracking-tighter">{{ nomeMesReferencia }}</h3>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ anoReferencia }}</p>
                     </div>
+                    <button @click="mudarMes(1)" class="p-2 hover:bg-white rounded-xl transition-all border border-slate-200 text-slate-400">
+                        <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <div class="text-right">
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Arrecadado no Mês</p>
+                    <h4 class="text-2xl font-black text-emerald-500 tracking-tighter">+ {{ formatarMoeda(totalMes) }}</h4>
                 </div>
             </div>
 
-            <!-- ABA BUSCA -->
-            <div v-else-if="abaAtual === 'extrato'" class="premium-card p-8 min-h-[500px]">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <div class="md:col-span-2">
-                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 block mb-2">Termo de Busca Global</label>
-                        <div class="relative">
-                            <i data-lucide="search" class="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400"></i>
-                            <input type="text" v-model="formBusca.texto" @keyup.enter="realizarBusca" placeholder="Ex: Mercado, Uber, Cartão Nu..." class="filter-select w-full pl-11">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 block mb-2">A Partir De</label>
-                        <input type="date" v-model="formBusca.dataInicio" class="filter-select w-full">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 block mb-2">Até O Dia</label>
-                        <input type="date" v-model="formBusca.dataFim" class="filter-select w-full">
-                    </div>
-                    <div class="md:col-span-4 flex justify-end">
-                        <button @click="realizarBusca" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-widest transition-colors flex items-center gap-2 shadow-lg shadow-indigo-200">
-                            <i data-lucide="search" class="w-4 h-4"></i> Pesquisar nos Registros
-                        </button>
-                    </div>
+            <div class="overflow-x-auto">
+                <div v-if="Object.keys(receitasAgrupadas).length === 0" class="p-20 text-center">
+                    <i data-lucide="inbox" class="w-12 h-12 mx-auto text-slate-200 mb-4"></i>
+                    <p class="text-slate-400 font-bold uppercase text-xs">Nenhuma receita para este período.</p>
                 </div>
 
-                <div v-if="resultadoBusca.length > 0" class="border border-slate-100 rounded-3xl overflow-hidden bg-white">
-                    <div class="bg-slate-50/50 p-4 border-b border-slate-100 flex justify-between items-center px-6">
-                        <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">{{ resultadoBusca.length }} lançamentos encontrados</span>
-                        <div class="flex gap-4">
-                            <span class="text-xs font-black text-emerald-500 uppercase">Receitas: {{ formatarMoeda(totalBusca.receita) }}</span>
-                            <span class="text-xs font-black text-rose-500 uppercase">Despesas: {{ formatarMoeda(totalBusca.despesa) }}</span>
+                <div v-for="(itens, categoria) in receitasAgrupadas" :key="categoria">
+                    <div class="category-header px-8 py-3 flex justify-between items-center">
+                        <span class="text-[11px] font-black text-emerald-600 uppercase tracking-widest">{{ categoria }}</span>
+                        <span class="text-[10px] font-bold text-slate-400">{{ formatarMoeda(calcularTotalGrupo(itens)) }}</span>
+                    </div>
+
+                    <table class="w-full text-left">
+                        <tbody class="text-sm font-semibold text-slate-600">
+                            <tr v-for="r in itens" :key="r.id" class="border-b border-slate-50 hover:bg-slate-50/20 transition-colors group">
+                                <td class="p-8 w-32">{{ formatarData(r.date) }}</td>
+                                <td class="p-8">
+                                    <div class="font-black text-slate-800 uppercase text-xs">{{ r.description }}</div>
+                                </td>
+                                <td class="p-8">
+                                    <div class="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase">
+                                        <i data-lucide="wallet" class="w-3 h-3"></i>
+                                        {{ r.account_name || 'Dinheiro Espécie' }}
+                                    </div>
+                                </td>
+                                <td class="p-8 text-right font-black text-emerald-500 text-sm w-40">+ {{ formatarMoeda(r.amount) }}</td>
+                                <td class="p-8 text-right w-28 whitespace-nowrap">
+                                    <button @click="abrirEdicao(r)" class="p-2 text-slate-300 hover:text-emerald-600 transition-all mr-1" title="Editar">
+                                        <i data-lucide="edit-2" class="w-4 h-4"></i>
+                                    </button>
+                                    <button @click="excluirReceita(r.id)" class="p-2 text-slate-300 hover:text-rose-500 transition-all" title="Excluir">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL DE EDIÇÃO -->
+        <transition name="fade-slide">
+            <div v-if="modalEdit.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                <div class="bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col border border-slate-100">
+                    <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <div>
+                            <h3 class="font-black text-slate-900 uppercase tracking-tighter text-xl leading-none">Editar Receita</h3>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase mt-2 tracking-widest">Ajuste os dados do rendimento</p>
+                        </div>
+                        <button @click="fecharEdicao" class="w-10 h-10 flex items-center justify-center hover:bg-white rounded-2xl transition-all shadow-sm border border-transparent hover:border-slate-200"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button>
+                    </div>
+                    
+                    <div class="p-8 space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="input-group md:col-span-2">
+                                <label>Origem / Descrição</label>
+                                <input v-model="modalEdit.form.description" type="text" class="premium-input">
+                            </div>
+                            <div class="input-group">
+                                <label>Valor (R$)</label>
+                                <input v-model="modalEdit.form.amount" type="number" step="0.01" class="premium-input">
+                            </div>
+                            <div class="input-group">
+                                <label>Data do Recebimento</label>
+                                <input v-model="modalEdit.form.date" type="date" class="premium-input">
+                            </div>
+                            <div class="input-group">
+                                <label>Conta Destino</label>
+                                <select v-model="modalEdit.form.account_id" class="premium-input">
+                                    <option value="">Nenhuma / Dinheiro</option>
+                                    <option v-for="c in contas" :key="c.id" :value="c.id">{{ c.name }}</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>Grupo de Receita</label>
+                                <select v-model="modalEdit.form.category_id" class="premium-input">
+                                    <option v-for="cat in categorias" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left">
-                            <tbody class="text-sm font-semibold text-slate-600 divide-y divide-slate-50">
-                                <tr v-for="d in resultadoBusca" :key="d.id" class="hover:bg-slate-50/50 transition-colors">
-                                    <td class="p-4 px-6 w-32 whitespace-nowrap">{{ formatarData(d.date) }}</td>
-                                    <td class="p-4 font-black text-slate-800 uppercase text-xs">{{ d.description }}</td>
-                                    <td class="p-4"><span class="px-3 py-1 bg-slate-100 rounded-lg text-[9px] font-black uppercase text-slate-500">{{ d.category_name }}</span></td>
-                                    <td class="p-4">{{ d.account_name || '--' }}</td>
-                                    <td class="p-4 px-6 text-right font-black text-sm" :class="d.type === 'revenue' ? 'text-emerald-500' : 'text-slate-700'">
-                                        {{ d.type === 'revenue' ? '+' : '-' }} {{ formatarMoeda(d.amount) }}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+
+                    <div class="p-8 bg-slate-50/50 pt-6">
+                        <button @click="salvarEdicao" :disabled="loading" class="w-full btn-confirm disabled:opacity-50">
+                            {{ loading ? 'Processando...' : 'Salvar Alterações' }}
+                        </button>
                     </div>
                 </div>
             </div>
         </transition>
+
     </div>
 
     <script>
-        const { createApp, ref, onMounted, watch, computed, shallowRef } = Vue;
+        const { createApp, ref, onMounted, computed, nextTick } = Vue;
 
         createApp({
             setup() {
-                const abaAtual = ref('tendencia');
-                const viewType = ref('financeiro');
                 const loading = ref(false);
+                const contas = ref([]);
+                const categorias = ref([]);
+                const receitas = ref([]);
                 
-                const filtroMeses = ref('6');
-                const datasTrend = ref({ inicio: '', fim: '' });
-                const filtroCategoria = ref('all');
-                const categoriasFiltro = ref([]);
-                const mostrarReceitas = ref(false);
-                
-                const chartDataObj = ref([]);
-                const globalTotals = ref({ revenue: 0, expense: 0, divisorMeses: 1 });
-                const chartInstance = shallowRef(null);
-                
-                const loadingBusca = ref(false);
-                const formBusca = ref({ dataInicio: '', dataFim: '', texto: '' });
-                const resultadoBusca = ref([]);
+                const hoje = new Date();
+                const mesReferencia = ref(hoje.getMonth() + 1);
+                const anoReferencia = ref(hoje.getFullYear());
 
-                const divisorMeses = computed(() => globalTotals.value.divisorMeses || 1);
-                
-                const totalFiltradoReceita = computed(() => chartDataObj.value.reduce((acc, curr) => acc + curr.revenue, 0));
-                const totalFiltradoDespesa = computed(() => chartDataObj.value.reduce((acc, curr) => acc + curr.expense, 0));
-
-                const mediaReceita = computed(() => totalFiltradoReceita.value / divisorMeses.value);
-                const mediaDespesa = computed(() => totalFiltradoDespesa.value / divisorMeses.value);
-
-                const percentualDespesa = computed(() => {
-                    if (!globalTotals.value.expense || globalTotals.value.expense === 0) return '0.0';
-                    return ((totalFiltradoDespesa.value / globalTotals.value.expense) * 100).toFixed(1);
+                const form = ref({
+                    description: '',
+                    amount: null,
+                    date: new Date().toISOString().substr(0, 10),
+                    account_id: '',
+                    category_id: ''
                 });
 
-                const percentualReceita = computed(() => {
-                    if (!globalTotals.value.revenue || globalTotals.value.revenue === 0) return '0.0';
-                    const valorAnalisado = totalFiltradoDespesa.value > 0 ? totalFiltradoDespesa.value : totalFiltradoReceita.value;
-                    return ((valorAnalisado / globalTotals.value.revenue) * 100).toFixed(1);
+                const modalEdit = ref({ show: false, form: {} });
+
+                const nomeMesReferencia = computed(() => new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date(anoReferencia.value, mesReferencia.value - 1)));
+                const totalMes = computed(() => receitas.value.reduce((acc, curr) => acc + curr.amount, 0));
+
+                const receitasAgrupadas = computed(() => {
+                    const grupos = {};
+                    receitas.value.forEach(r => {
+                        const cat = r.category_name || 'Sem Categoria';
+                        if (!grupos[cat]) grupos[cat] = [];
+                        grupos[cat].push(r);
+                    });
+                    return grupos;
                 });
 
-                const semDadosTrend = computed(() => chartDataObj.value.length === 0);
-
-                const carregarConfigs = async () => {
+                const carregarDados = async () => {
                     try {
-                        const res = await fetch('http://localhost:3000/api/configuracoes?type=GrupoDespesa');
-                        categoriasFiltro.value = await res.json();
+                        const [resC, resD, resR] = await Promise.all([
+                            fetch('http://localhost:3000/api/configuracoes?type=Conta'),
+                            fetch('http://localhost:3000/api/configuracoes?type=GrupoReceita'),
+                            fetch(`http://localhost:3000/api/receitas?mes=${mesReferencia.value}&ano=${anoReferencia.value}`)
+                        ]);
+                        contas.value = await resC.json();
+                        categorias.value = await resD.json();
+                        receitas.value = await resR.json();
+                        nextTick(() => lucide.createIcons());
                     } catch (e) { console.error(e); }
                 };
 
-                const onFiltroMesesChange = () => {
-                    if (filtroMeses.value !== 'custom') carregarRelatorioTrend();
+                const mudarMes = (direcao) => {
+                    let novaData = new Date(anoReferencia.value, mesReferencia.value - 1 + direcao, 1);
+                    mesReferencia.value = novaData.getMonth() + 1;
+                    anoReferencia.value = novaData.getFullYear();
+                    carregarDados();
                 };
 
-                const onCategoriaChange = () => {
-                    mostrarReceitas.value = false;
-                    carregarRelatorioTrend();
-                };
+                const calcularTotalGrupo = (itens) => itens.reduce((acc, curr) => acc + curr.amount, 0);
 
-                const carregarRelatorioTrend = async () => {
+                const salvarReceita = async () => {
+                    if (!form.value.description || !form.value.amount || !form.value.category_id) {
+                        alert("Preencha Descrição, Valor e o Grupo de Receita.");
+                        return;
+                    }
                     loading.value = true;
                     try {
-                        let query = `?months=${filtroMeses.value}&categoryId=${filtroCategoria.value}&viewType=${viewType.value}`;
-                        if (filtroMeses.value === 'custom' && datasTrend.value.inicio && datasTrend.value.fim) {
-                            query += `&inicio=${datasTrend.value.inicio}&fim=${datasTrend.value.fim}`;
+                        const res = await fetch('http://localhost:3000/api/receitas', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(form.value)
+                        });
+                        if (res.ok) {
+                            form.value.description = ''; 
+                            form.value.amount = null; 
+                            await carregarDados();
+                        } else { alert("Erro no servidor."); }
+                    } catch (e) { alert("Erro de conexão."); } finally { loading.value = false; }
+                };
+
+                const abrirEdicao = (r) => {
+                    modalEdit.value.form = { ...r };
+                    modalEdit.value.show = true;
+                    nextTick(() => lucide.createIcons());
+                };
+
+                const fecharEdicao = () => { modalEdit.value.show = false; };
+
+                const salvarEdicao = async () => {
+                    if (!modalEdit.value.form.description || !modalEdit.value.form.amount || !modalEdit.value.form.category_id) {
+                        alert("Os campos Descrição, Valor e Grupo são obrigatórios.");
+                        return;
+                    }
+                    loading.value = true;
+                    try {
+                        const res = await fetch(`http://localhost:3000/api/receitas/${modalEdit.value.form.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(modalEdit.value.form)
+                        });
+                        if (res.ok) {
+                            fecharEdicao();
+                            await carregarDados();
+                        } else {
+                            alert("Erro ao atualizar a receita.");
                         }
-                        
-                        const res = await fetch(`http://localhost:3000/api/relatorios/trend${query}`);
-                        const json = await res.json();
-                        
-                        chartDataObj.value = json.chartData || [];
-                        globalTotals.value = json.globalData || { revenue: 0, expense: 0, divisorMeses: 1 };
-                        
-                        renderizarChartTrend();
-                    } catch (e) { console.error("Erro ao carregar tendência:", e); } 
+                    } catch (e) { alert("Erro de conexão com o servidor."); } 
                     finally { loading.value = false; }
                 };
 
-                const renderizarChartTrend = () => {
-                    if (chartInstance.value) chartInstance.value.destroy();
-                    if (semDadosTrend.value) return;
-
-                    const ctx = document.getElementById('trendChart');
-                    if (!ctx) return;
-
-                    const labels = chartDataObj.value.map(d => {
-                        const [year, month] = d.period.split('-');
-                        return new Date(year, month - 1).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).toUpperCase();
-                    });
-
-                    const isEspecifco = filtroCategoria.value !== 'all';
-                    const isConsumo = viewType.value === 'consumo';
-                    
-                    // LÓGICA INTELIGENTE: Oculta a receita automaticamente no modo "Consumo" ou "Filtro Específico",
-                    // a menos que o usuário marque a caixa "Exibir Receitas Base".
-                    const deveMostrarReceita = (!isEspecifco && !isConsumo) || mostrarReceitas.value;
-
-                    const datasets = [];
-
-                    if (deveMostrarReceita) {
-                        datasets.push({
-                            label: 'Entradas (R$)',
-                            data: chartDataObj.value.map(d => d.revenue),
-                            backgroundColor: isEspecifco || isConsumo ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.8)',
-                            borderColor: 'rgba(16, 185, 129, 1)',
-                            borderWidth: isEspecifco || isConsumo ? 2 : 0,
-                            borderRadius: isEspecifco || isConsumo ? 0 : 8,
-                            type: isEspecifco || isConsumo ? 'line' : 'bar',
-                            tension: 0.4,
-                            fill: isEspecifco || isConsumo,
-                            borderDash: isEspecifco || isConsumo ? [5, 5] : []
-                        });
-                    }
-
-                    datasets.push({
-                        label: isEspecifco ? 'Gastos do Grupo (R$)' : 'Saídas (R$)',
-                        data: chartDataObj.value.map(d => d.expense),
-                        backgroundColor: isEspecifco ? 'rgba(99, 102, 241, 0.15)' : 'rgba(244, 63, 94, 0.8)',
-                        borderColor: isEspecifco ? 'rgba(79, 70, 229, 1)' : 'rgba(244, 63, 94, 1)',
-                        borderWidth: isEspecifco ? 3 : 0,
-                        borderRadius: isEspecifco ? 0 : 8,
-                        type: isEspecifco ? 'line' : 'bar',
-                        tension: 0.4,
-                        fill: isEspecifco,
-                        pointBackgroundColor: 'white',
-                        pointBorderWidth: 2,
-                        pointRadius: isEspecifco ? 5 : 0,
-                        pointHoverRadius: 7
-                    });
-
-                    Chart.defaults.font.family = 'Inter';
-                    Chart.defaults.color = '#94a3b8';
-
-                    chartInstance.value = new Chart(ctx, {
-                        type: 'bar',
-                        data: { labels, datasets },
-                        options: {
-                            responsive: true, maintainAspectRatio: false,
-                            interaction: { mode: 'index', intersect: false },
-                            plugins: {
-                                legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8, font: { weight: 'bold', size: 11 } } },
-                                tooltip: {
-                                    backgroundColor: 'rgba(15, 23, 42, 0.9)', padding: 12, titleFont: { size: 13 },
-                                    bodyFont: { size: 14, weight: 'bold' }, cornerRadius: 12, displayColors: true,
-                                    callbacks: { label: (context) => ' ' + formatarMoeda(context.raw) }
-                                }
-                            },
-                            scales: {
-                                y: {
-                                    beginAtZero: true, grid: { color: '#f1f5f9', drawBorder: false },
-                                    border: { dash: [4, 4] }, ticks: { callback: (val) => 'R$ ' + val, font: { weight: '600' } }
-                                },
-                                x: { grid: { display: false, drawBorder: false }, ticks: { font: { weight: '800' } } }
-                            }
-                        }
-                    });
-                };
-
-                const totalBusca = computed(() => {
-                    return resultadoBusca.value.reduce((acc, curr) => {
-                        if (curr.type === 'revenue') acc.receita += curr.amount;
-                        else acc.despesa += curr.amount;
-                        return acc;
-                    }, { receita: 0, despesa: 0 });
-                });
-
-                const realizarBusca = async () => {
-                    if (!formBusca.value.dataInicio || !formBusca.value.dataFim) {
-                        alert("Preencha as datas de início e fim."); return;
-                    }
-                    loadingBusca.value = true;
-                    try {
-                        const res = await fetch(`http://localhost:3000/api/relatorios/search?inicio=${formBusca.value.dataInicio}&fim=${formBusca.value.dataFim}&texto=${formBusca.value.texto}`);
-                        resultadoBusca.value = await res.json();
-                    } catch (e) { console.error(e); } finally { loadingBusca.value = false; }
+                const excluirReceita = async (id) => {
+                    if (!confirm("Remover esta receita permanentemente?")) return;
+                    await fetch(`http://localhost:3000/api/receitas/${id}`, { method: 'DELETE' });
+                    carregarDados();
                 };
 
                 const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
-                const formatarData = (d) => d.split('-').reverse().join('/');
+                const formatarData = (d) => {
+                    if(!d) return '--';
+                    const [ano, mes, dia] = d.split('-');
+                    return `${dia}/${mes}/${ano}`;
+                };
 
-                watch(abaAtual, (n) => { 
-                    if (n === 'tendencia') setTimeout(() => carregarRelatorioTrend(), 100);
-                    else setTimeout(() => lucide.createIcons(), 50);
-                });
-
-                onMounted(() => { 
-                    const hoje = new Date();
-                    const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
-                    const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().split('T')[0];
-                    formBusca.value.dataInicio = primeiroDia;
-                    formBusca.value.dataFim = ultimoDia;
-                    datasTrend.value.inicio = primeiroDia;
-                    datasTrend.value.fim = ultimoDia;
-
-                    carregarConfigs(); 
-                    carregarRelatorioTrend(); 
-                    lucide.createIcons();
-                });
+                onMounted(carregarDados);
 
                 return { 
-                    abaAtual, viewType, loading, filtroMeses, filtroCategoria, categoriasFiltro,
-                    datasTrend, carregarRelatorioTrend, formatarMoeda, mediaReceita, mediaDespesa,
-                    percentualDespesa, percentualReceita, divisorMeses,
-                    loadingBusca, formBusca, resultadoBusca, realizarBusca, totalBusca,
-                    formatarData, semDadosTrend, mostrarReceitas, renderizarChartTrend, onCategoriaChange,
-                    onFiltroMesesChange
+                    loading, contas, categorias, receitas, form, totalMes,
+                    mesReferencia, anoReferencia, nomeMesReferencia, receitasAgrupadas,
+                    mudarMes, calcularTotalGrupo, salvarReceita, excluirReceita, 
+                    formatarMoeda, formatarData,
+                    modalEdit, abrirEdicao, fecharEdicao, salvarEdicao
                 };
             }
         }).mount('#app');
