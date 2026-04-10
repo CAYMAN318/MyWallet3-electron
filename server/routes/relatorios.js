@@ -5,41 +5,41 @@ const db = require('../database');
 const queryAll = (sql, params = []) => db.prepare(sql).all(params);
 
 /**
- * GET: Trend (Evolução Mensal com Limites Estritos e Totais Globais)
+ * GET: Trend (Evolução Mensal com Lógica de Fallback para Receitas)
  */
 router.get('/trend', (req, res) => {
     const { months = 6, categoryId, viewType = 'financeiro', inicio, fim } = req.query;
     const numMonths = parseInt(months) || 6;
     
-    // Define a coluna de data a ser lida
-    const dateColumn = viewType === 'consumo' ? 'purchase_date' : 'date';
+    // CORREÇÃO TÁTICA: No regime de Consumo, usamos purchase_date para despesas,
+    // mas para receitas (que não têm purchase_date), usamos a data padrão.
+    // O NULLIF garante que strings vazias sejam tratadas como NULL para o COALESCE funcionar.
+    const effectiveDate = viewType === 'consumo' 
+        ? "COALESCE(NULLIF(purchase_date, ''), date)" 
+        : "date";
 
     try {
         let dataInicio, dataFim;
         const today = new Date();
 
-        // LÓGICA DE CÁLCULO DE PERÍODO ESTRITO (Corrige o bug das parcelas futuras)
         if (inicio && fim && inicio !== '' && fim !== '') {
             dataInicio = inicio;
             dataFim = fim;
         } else {
-            // Se for período pré-definido, trava o limite inferior e o SUPERIOR (hoje)
             const startObj = new Date(today.getFullYear(), today.getMonth() - numMonths + 1, 1);
             dataInicio = `${startObj.getFullYear()}-${String(startObj.getMonth() + 1).padStart(2, '0')}-01`;
-
-            // Trava no último dia do mês atual
             const endObj = new Date(today.getFullYear(), today.getMonth() + 1, 0); 
             dataFim = `${endObj.getFullYear()}-${String(endObj.getMonth() + 1).padStart(2, '0')}-${String(endObj.getDate()).padStart(2, '0')}`;
         }
 
-        // QUERY 1: Dados do Gráfico (Aplicando o filtro de Grupo, se existir)
+        // QUERY 1: Dados do Gráfico (Usa a data efetiva corrigida)
         let sqlChart = `
             SELECT 
-                strftime('%Y-%m', ${dateColumn}) as period, 
+                strftime('%Y-%m', ${effectiveDate}) as period, 
                 type, 
                 SUM(amount) as total
             FROM Transactions
-            WHERE ${dateColumn} BETWEEN ? AND ?
+            WHERE ${effectiveDate} BETWEEN ? AND ?
         `;
         let paramsChart = [dataInicio, dataFim];
 
@@ -50,16 +50,15 @@ router.get('/trend', (req, res) => {
         sqlChart += ` GROUP BY period, type ORDER BY period ASC`;
         const chartDataRaw = queryAll(sqlChart, paramsChart);
 
-        // QUERY 2: Dados Globais do mesmo período (Para poder calcular as Porcentagens)
+        // QUERY 2: Dados Globais (Usa a data efetiva corrigida para não sumir com as receitas)
         const sqlGlobal = `
             SELECT type, SUM(amount) as total
             FROM Transactions
-            WHERE ${dateColumn} BETWEEN ? AND ?
+            WHERE ${effectiveDate} BETWEEN ? AND ?
             GROUP BY type
         `;
         const globalDataRaw = queryAll(sqlGlobal, [dataInicio, dataFim]);
 
-        // Processamento para o Frontend
         const periods = {};
         chartDataRaw.forEach(row => {
             const p = row.period;
@@ -75,11 +74,10 @@ router.get('/trend', (req, res) => {
             if (row.type === 'expense') globalTotalExpense = parseFloat(row.total) || 0;
         });
 
-        // Calcula o divisor exato de meses para a Média não ser distorcida
         const dStart = new Date(dataInicio + 'T12:00:00');
         const dEnd = new Date(dataFim + 'T12:00:00');
         let exactMonths = (dEnd.getFullYear() - dStart.getFullYear()) * 12 + (dEnd.getMonth() - dStart.getMonth()) + 1;
-        if (exactMonths <= 0) exactMonths = 1; // Proteção matemática
+        if (exactMonths <= 0) exactMonths = 1;
 
         res.json({
             chartData: Object.values(periods),
