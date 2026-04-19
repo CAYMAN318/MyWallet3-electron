@@ -37,300 +37,359 @@
             border-radius: 1.25rem;
             border: 1px solid #e2e8f0;
             background-color: #f8fafc;
-            font-size: 14px;
-            font-weight: 600;
             color: #334155;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 700;
+            font-size: 13px;
             outline: none;
+            transition: all 0.2s;
         }
-
+        
         .premium-input:focus {
-            background-color: white;
             border-color: #6366f1;
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.08);
+            background-color: white;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
         }
 
-        .btn-confirm {
-            background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
             color: white;
-            padding: 18px;
-            border-radius: 1.5rem;
             font-weight: 900;
             text-transform: uppercase;
             font-size: 11px;
             letter-spacing: 0.1em;
-            box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.3);
-            transition: all 0.3s ease;
+            padding: 16px 32px;
+            border-radius: 1.25rem;
+            transition: all 0.2s;
+            box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4);
         }
 
-        .btn-confirm:hover:not(:disabled) {
-            transform: translateY(-2px);
-            filter: brightness(1.1);
-        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 15px 25px -5px rgba(99, 102, 241, 0.5); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-        .credit-section {
-            background: linear-gradient(to bottom right, #f5f3ff, #ede9fe);
-            border: 1px dashed #c4b5fd;
-        }
+        .modal-enter-active, .modal-leave-active { transition: opacity 0.3s ease; }
+        .modal-enter-from, .modal-leave-to { opacity: 0; }
+        
+        /* Animações do Efeito Sanfona (Accordion) */
+        .slide-fade-enter-active { transition: all 0.3s ease-out; }
+        .slide-fade-leave-active { transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1); }
+        .slide-fade-enter-from, .slide-fade-leave-to { transform: translateY(-10px); opacity: 0; }
 
-        .category-header { background-color: #f8fafc; border-left: 4px solid #6366f1; }
-        .fade-slide-enter-active, .fade-slide-leave-active { transition: all 0.3s ease; }
-        .fade-slide-enter-from, .fade-slide-leave-to { opacity: 0; transform: translateY(-10px); }
+        /* Animação para aparecimento suave de elementos */
+        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="p-6">
 
-    <div id="app" v-cloak class="max-w-6xl mx-auto">
+    <!-- Expandido para max-w-7xl e reduzido espaço vertical (space-y-6) para caber mais na tela -->
+    <div id="app" v-cloak class="max-w-7xl mx-auto space-y-6">
         
-        <div class="flex justify-between items-center mb-10">
+        <!-- HEADER PRINCIPAL -->
+        <header class="flex justify-between items-center">
             <div>
                 <h1 class="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Fluxo de Saída</h1>
-                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Gestão de Gastos e Orçamentos</p>
+                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Lançamento de Despesas</p>
             </div>
-            <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center shadow-inner">
+            <div class="w-14 h-14 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center shadow-inner">
                 <i data-lucide="arrow-down-right" class="w-8 h-8"></i>
             </div>
-        </div>
+        </header>
 
-        <div class="premium-card p-10 mb-10">
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+        <!-- FORMULÁRIO DE LANÇAMENTO -->
+        <div class="premium-card p-6 lg:p-8">
+            <form @submit.prevent="salvarDespesa" class="grid grid-cols-1 md:grid-cols-12 gap-6">
                 
-                <div class="md:col-span-8 input-group">
-                    <label>Descrição da Despesa</label>
-                    <input v-model="form.description" type="text" class="premium-input" placeholder="O que você comprou / Qual é a conta?">
+                <!-- LINHA 1 -->
+                <div class="md:col-span-12 lg:col-span-4 input-group">
+                    <label>Descrição do Gasto</label>
+                    <input v-model="form.description" type="text" required placeholder="Ex: Supermercado, Luz..." class="premium-input">
                 </div>
-                
-                <div class="md:col-span-4 input-group">
+
+                <div class="md:col-span-6 lg:col-span-2 input-group">
                     <label>Valor Total (R$)</label>
-                    <input v-model="form.amount" type="number" step="0.01" class="premium-input" placeholder="0,00">
-                </div>
-                
-                <div class="md:col-span-3 input-group">
-                    <label>Data da Compra / Emissão</label>
-                    <input v-model="form.purchase_date" type="date" class="premium-input">
+                    <input v-model.number="form.amount" type="number" step="0.01" required placeholder="0,00" class="premium-input text-rose-600">
                 </div>
 
-                <div class="md:col-span-3 input-group">
+                <div class="md:col-span-6 lg:col-span-3 input-group">
+                    <label>Data da Compra</label>
+                    <input v-model="form.purchase_date" type="date" required class="premium-input text-xs text-indigo-600 bg-indigo-50 border-indigo-100" title="Data real em que o gasto foi feito (Competência)">
+                </div>
+
+                <div class="md:col-span-6 lg:col-span-3 input-group">
+                    <label>Primeiro Vencimento</label>
+                    <input v-model="form.date" type="date" required class="premium-input text-xs">
+                </div>
+                
+                <!-- LINHA 2 -->
+                <div class="md:col-span-6 lg:col-span-4 input-group">
+                    <label>Grupo Pai</label>
+                    <select v-model="form.category_id" @change="onCategoryChange" required class="premium-input">
+                        <option value="" disabled>Selecione...</option>
+                        <option v-for="c in categorias" :key="c.id" :value="c.id">{{ c.name }}</option>
+                    </select>
+                </div>
+
+                <div class="md:col-span-6 lg:col-span-4 input-group">
+                    <label>Subgrupo Específico</label>
+                    <select v-model="form.subgroup" class="premium-input" :disabled="!subgruposFormatados.length">
+                        <option value="">Geral (Sem Subgrupo)</option>
+                        <option v-for="s in subgruposFormatados" :key="s" :value="s">{{ s }}</option>
+                    </select>
+                </div>
+
+                <div class="md:col-span-12 lg:col-span-4 input-group">
                     <label>Conta / Cartão</label>
-                    <select v-model="form.account_id" class="premium-input">
-                        <option value="">Selecione...</option>
+                    <select v-model="form.account_id" required class="premium-input">
+                        <option value="" disabled>Selecione...</option>
                         <option v-for="c in contas" :key="c.id" :value="c.id">{{ c.name }}</option>
                     </select>
                 </div>
 
-                <div class="md:col-span-3 input-group">
-                    <label>Grupo de Despesa</label>
-                    <select v-model="form.category_id" @change="onCategoryChange" class="premium-input">
-                        <option value="">Selecione...</option>
-                        <option v-for="cat in categorias" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-                    </select>
-                </div>
-
-                <div class="md:col-span-3 input-group">
-                    <label>Subgrupo</label>
-                    <select v-model="form.subgroup" class="premium-input">
-                        <option value="">Selecione...</option>
-                        <option v-for="sub in subgruposFormatados" :key="sub" :value="sub">{{ sub }}</option>
-                    </select>
-                </div>
-
-                <div class="md:col-span-12 flex flex-wrap items-center gap-6 p-5 bg-slate-50/50 rounded-2xl border border-slate-100">
-                    <label class="flex items-center gap-3 cursor-pointer group">
-                        <input type="checkbox" v-model="form.is_credit" class="w-5 h-5 rounded-lg text-indigo-600 border-slate-300 focus:ring-indigo-500">
-                        <span class="text-[11px] font-black text-slate-600 uppercase tracking-widest group-hover:text-indigo-600 transition-colors">Compra no Crédito / Parcelada?</span>
-                    </label>
+                <!-- LINHA 3: CONTROLES DE PARCELAMENTO E STATUS -->
+                <div class="md:col-span-12 flex flex-wrap lg:flex-nowrap items-center justify-between gap-6 p-5 bg-slate-50 border border-slate-100 rounded-[1.5rem]">
                     
-                    <div class="h-6 w-px bg-slate-200 hidden md:block"></div>
-                    
-                    <label class="flex items-center gap-3 cursor-pointer group">
-                        <input type="checkbox" v-model="form.is_paid" class="w-5 h-5 rounded-lg text-emerald-500 border-slate-300 focus:ring-emerald-500">
-                        <span class="text-[11px] font-black uppercase tracking-widest transition-colors flex items-center gap-2" :class="form.is_paid ? 'text-emerald-600' : 'text-amber-500'">
-                            {{ form.is_paid ? 'Consolidado / Já Pago' : 'Agendado / Pendente' }}
-                            <span v-if="isItemMatriz" class="px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded text-[9px] font-black uppercase tracking-widest" title="Item da Matriz">Matriz</span>
-                        </span>
-                    </label>
-                </div>
+                    <div class="flex gap-8">
+                        <!-- Toggle: Crédito / Prazo -->
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <div class="relative">
+                                <input type="checkbox" v-model="form.is_credit" class="sr-only">
+                                <div class="w-12 h-6 bg-slate-200 rounded-full shadow-inner transition-colors" :class="{ 'bg-indigo-500': form.is_credit }"></div>
+                                <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform shadow-sm" :class="{ 'translate-x-6': form.is_credit }"></div>
+                            </div>
+                            <span class="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-slate-800 transition-colors">
+                                Crédito (Prazo)?
+                            </span>
+                        </label>
 
-                <transition name="fade-slide">
-                    <div v-if="form.is_credit" class="md:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-8 p-8 credit-section rounded-[2rem]">
-                        <div class="input-group">
-                            <label class="text-indigo-600">Nº de Parcelas</label>
-                            <input v-model="form.installments" type="number" min="1" class="premium-input border-indigo-200">
+                        <!-- Input: Qtd Parcelas (Mantido em 1 por padrão) -->
+                        <div v-if="form.is_credit" class="flex items-center gap-3 animate-fade-in">
+                            <label class="text-[10px] font-black uppercase tracking-widest text-indigo-500">Qtd. Parcelas:</label>
+                            <input v-model.number="form.installments" type="number" min="1" max="72" required class="w-20 px-3 py-1.5 rounded-xl border border-indigo-200 bg-white text-sm font-bold text-indigo-700 outline-none focus:border-indigo-500">
                         </div>
-                        <div class="input-group">
-                            <label class="text-indigo-600 font-bold">1º Vencimento (Fatura)</label>
-                            <input v-model="form.due_date" type="date" class="premium-input border-indigo-200">
-                        </div>
+
+                        <!-- Toggle: Pago vs Pendente -->
+                        <label v-if="!form.is_credit" class="flex items-center gap-3 cursor-pointer group animate-fade-in border-l border-slate-200 pl-8">
+                            <div class="relative">
+                                <input type="checkbox" v-model="form.is_paid" class="sr-only">
+                                <div class="w-12 h-6 bg-slate-200 rounded-full shadow-inner transition-colors" :class="{ 'bg-emerald-500': form.is_paid }"></div>
+                                <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform shadow-sm" :class="{ 'translate-x-6': form.is_paid }"></div>
+                            </div>
+                            <span class="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-slate-800 transition-colors">
+                                {{ form.is_paid ? 'Já Pago (Liquidado)' : 'Pendente (A Pagar)' }}
+                            </span>
+                        </label>
                     </div>
-                </transition>
 
-                <div class="md:col-span-12 pt-2">
-                    <button @click="salvarDespesa" :disabled="loading" class="w-full btn-confirm disabled:opacity-50">
-                        {{ loading ? 'Salvando...' : 'Confirmar Lançamento' }}
-                    </button>
+                    <div class="flex-1 flex justify-end">
+                        <button type="submit" :disabled="loading" class="btn-primary w-full md:w-auto flex justify-center items-center gap-2">
+                            <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                            {{ loading ? 'Salvando...' : 'Lançar Despesa' }}
+                        </button>
+                    </div>
                 </div>
-            </div>
+
+            </form>
         </div>
 
-        <div class="premium-card overflow-hidden">
-            <div class="p-8 border-b border-slate-100 bg-slate-50/50 flex flex-wrap justify-between items-center gap-4">
-                <div class="flex items-center gap-4">
-                    <button @click="mudarMes(-1)" class="p-2 hover:bg-white rounded-xl transition-all border border-slate-200 text-slate-400">
-                        <i data-lucide="chevron-left" class="w-5 h-5"></i>
-                    </button>
-                    <div class="text-center min-w-[150px]">
-                        <h3 class="font-black text-slate-800 uppercase text-sm tracking-tighter">{{ nomeMesReferencia }}</h3>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ anoReferencia }}</p>
+        <!-- BARRA DE CONTROLE TÁTICO: COMPACTADA NA MESMA LINHA -->
+        <div class="flex flex-col lg:flex-row items-stretch gap-4 w-full h-auto">
+            
+            <!-- RESUMO DO MÊS (Esquerda) -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full lg:flex-1">
+                <div class="premium-card p-3 flex justify-between items-center border-l-4 border-l-rose-500">
+                    <div>
+                        <p class="text-[9px] font-black uppercase tracking-widest text-slate-400">Total Projetado</p>
+                        <p class="text-base lg:text-lg font-black text-rose-600 mt-0.5 tracking-tighter">{{ formatarMoeda(totalMes) }}</p>
                     </div>
-                    <button @click="mudarMes(1)" class="p-2 hover:bg-white rounded-xl transition-all border border-slate-200 text-slate-400">
-                        <i data-lucide="chevron-right" class="w-5 h-5"></i>
-                    </button>
+                    <div class="w-8 h-8 bg-rose-50 rounded-[8px] flex items-center justify-center shrink-0 ml-2"><i data-lucide="calculator" class="w-4 h-4 text-rose-500"></i></div>
                 </div>
                 
-                <div class="flex gap-6 items-end">
-                    <div class="text-right">
-                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Status do Mês</p>
-                        <div class="flex gap-3 text-xs font-bold uppercase tracking-wider">
-                            <span class="text-emerald-500 bg-emerald-50 px-2 py-1 rounded-lg">Pago: {{ formatarMoeda(totalPago) }}</span>
-                            <span class="text-amber-500 bg-amber-50 px-2 py-1 rounded-lg">A Pagar: {{ formatarMoeda(totalPendente) }}</span>
-                        </div>
+                <div class="premium-card p-3 flex justify-between items-center border-l-4 border-l-emerald-500">
+                    <div>
+                        <p class="text-[9px] font-black uppercase tracking-widest text-slate-400">Já Liquidado</p>
+                        <p class="text-base lg:text-lg font-black text-emerald-600 mt-0.5 tracking-tighter">{{ formatarMoeda(totalPago) }}</p>
                     </div>
-                    <div class="w-px h-10 bg-slate-200 hidden md:block"></div>
-                    <div class="text-right">
-                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Orçamento Projetado</p>
-                        <h4 class="text-2xl font-black text-rose-500 tracking-tighter">{{ formatarMoeda(totalMes) }}</h4>
+                    <div class="w-8 h-8 bg-emerald-50 rounded-[8px] flex items-center justify-center shrink-0 ml-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i></div>
+                </div>
+
+                <div class="premium-card p-3 flex justify-between items-center border-l-4 border-l-amber-500">
+                    <div>
+                        <p class="text-[9px] font-black uppercase tracking-widest text-slate-400">Falta Pagar</p>
+                        <p class="text-base lg:text-lg font-black text-amber-600 mt-0.5 tracking-tighter">{{ formatarMoeda(totalPendente) }}</p>
                     </div>
+                    <div class="w-8 h-8 bg-amber-50 rounded-[8px] flex items-center justify-center shrink-0 ml-2"><i data-lucide="clock" class="w-4 h-4 text-amber-500"></i></div>
                 </div>
             </div>
 
-            <div class="overflow-x-auto">
-                <div v-for="(itens, categoria) in despesasAgrupadas" :key="categoria">
-                    <div class="category-header px-8 py-3 flex justify-between items-center">
-                        <span class="text-[11px] font-black text-indigo-600 uppercase tracking-widest">{{ categoria }}</span>
-                        <span class="text-[10px] font-bold text-slate-400">{{ formatarMoeda(calcularTotalGrupo(itens)) }}</span>
+            <!-- NAVBAR DE NAVEGAÇÃO (Direita) - Integrada e Minimalista -->
+            <div class="flex items-center justify-center gap-3 bg-white px-4 py-2 rounded-[1.5rem] shadow-sm border border-slate-100 shrink-0 w-full lg:w-auto h-full min-h-[64px]">
+                <button @click="mudarMes(-1)" class="p-1.5 hover:bg-slate-50 rounded-xl transition-all border border-slate-200 text-slate-400 hover:text-indigo-600 shadow-sm">
+                    <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                </button>
+                <div class="text-center min-w-[120px]">
+                    <div class="flex items-center justify-center gap-1.5 mb-0.5">
+                        <i data-lucide="calendar" class="w-3 h-3 text-indigo-500"></i>
+                        <h3 class="font-black text-slate-800 uppercase text-[11px] tracking-widest">{{ nomeMesReferencia }}</h3>
                     </div>
-                    <table class="w-full text-left">
-                        <tbody class="text-sm font-semibold text-slate-600">
-                            <tr v-for="d in itens" :key="d.id" class="border-b border-slate-50 transition-colors group" :class="d.is_paid === 0 ? 'bg-amber-50/20 hover:bg-amber-50/50' : 'hover:bg-slate-50/50'">
-                                <td class="p-8 w-32">
-                                    <div class="flex flex-col gap-1">
-                                        <span>{{ formatarData(d.purchase_date || d.date) }}</span>
-                                        <span v-if="d.date !== d.purchase_date && d.is_paid === 0" class="text-[9px] font-black text-amber-500 uppercase">Vence: {{ formatarData(d.date) }}</span>
-                                    </div>
-                                </td>
-                                <td class="p-8">
-                                    <div class="flex items-center gap-2">
-                                        <div class="font-black text-slate-800 uppercase text-xs">{{ d.description }}</div>
-                                        <span v-if="d.is_paid === 0" class="px-2 py-0.5 bg-amber-100 text-amber-600 rounded text-[8px] font-black uppercase tracking-widest">Pendente</span>
-                                    </div>
-                                </td>
-                                <td class="p-8">
-                                    <span v-if="d.subgroup" class="px-3 py-1 bg-slate-100 rounded-lg text-[9px] font-black uppercase text-slate-500">{{ d.subgroup }}</span>
-                                </td>
-                                <td class="p-8">
-                                    <div class="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase">
-                                        <i data-lucide="wallet" class="w-3 h-3"></i>
-                                        {{ d.account_name }}
-                                    </div>
-                                </td>
-                                <td class="p-8 text-right font-black text-sm w-40" :class="d.is_paid === 0 ? 'text-amber-600' : 'text-slate-700'">
-                                    {{ formatarMoeda(d.amount) }}
-                                </td>
-                                <td class="p-8 text-right w-36 whitespace-nowrap">
-                                    <button v-if="d.is_paid === 0" @click="alternarStatus(d.id)" class="p-2 text-amber-400 bg-white border border-slate-100 shadow-sm hover:border-emerald-200 hover:text-emerald-500 rounded-xl transition-all mr-1" title="Confirmar Pagamento">
-                                        <i data-lucide="check-circle" class="w-4 h-4"></i>
-                                    </button>
-                                    <button v-else @click="alternarStatus(d.id)" class="p-2 text-slate-300 hover:text-amber-500 transition-all mr-1" title="Desfazer Pagamento (Marcar como Pendente)">
-                                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-                                    </button>
+                    <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Ano {{ anoReferencia }}</p>
+                </div>
+                <button @click="mudarMes(1)" class="p-1.5 hover:bg-slate-50 rounded-xl transition-all border border-slate-200 text-slate-400 hover:text-indigo-600 shadow-sm">
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+            
+        </div>
 
-                                    <button @click="abrirEdicao(d)" class="p-2 text-slate-300 hover:text-indigo-600 transition-all mr-1" title="Editar">
-                                        <i data-lucide="edit-2" class="w-4 h-4"></i>
-                                    </button>
-                                    <button @click="excluirDespesa(d.id)" class="p-2 text-slate-300 hover:text-rose-500 transition-all" title="Excluir">
-                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+        <!-- EXTRATO DE LANÇAMENTOS (COM DIVULGAÇÃO PROGRESSIVA) -->
+        <div class="premium-card overflow-hidden">
+            
+            <!-- Controle Global -->
+            <div class="p-6 lg:p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                <div>
+                    <h3 class="font-black text-slate-800 uppercase text-xs tracking-widest">Extrato de Lançamentos</h3>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Registros consolidados</p>
+                </div>
+                
+                <div v-if="Object.keys(despesasAgrupadas).length > 0" class="flex gap-2">
+                    <button @click="expandirTudo" class="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-lg transition-colors flex items-center gap-1">
+                        <i data-lucide="chevrons-down" class="w-3 h-3"></i> Expandir
+                    </button>
+                    <button @click="recolherTudo" class="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition-colors flex items-center gap-1">
+                        <i data-lucide="chevrons-up" class="w-3 h-3"></i> Recolher
+                    </button>
+                </div>
+            </div>
+
+            <div v-if="Object.keys(despesasAgrupadas).length === 0" class="p-12 text-center text-slate-400">
+                <i data-lucide="inbox" class="w-12 h-12 mx-auto opacity-20 mb-4"></i>
+                <p class="font-bold uppercase tracking-widest text-xs">Nenhuma despesa registrada neste mês.</p>
+            </div>
+
+            <div v-else class="divide-y divide-slate-100">
+                
+                <div v-for="(lista, categoria) in despesasAgrupadas" :key="categoria" class="group">
+                    
+                    <!-- CABEÇALHO DO GRUPO (CLICÁVEL) -->
+                    <div @click="toggleGrupo(categoria)" class="px-6 lg:px-8 py-4 bg-white hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors">
+                        <div class="flex items-center gap-4">
+                            <div class="w-6 h-6 flex items-center justify-center rounded bg-slate-100 text-slate-400 transition-transform duration-300" :class="{ 'rotate-180': gruposExpandidos[categoria] }">
+                                <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                            </div>
+                            <h4 class="text-sm font-black text-slate-700 uppercase tracking-tight">{{ categoria }}</h4>
+                            <span class="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md text-[10px] font-bold">{{ lista.length }} itens</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-0.5">Total do Grupo</span>
+                            <span class="font-black text-rose-600">{{ formatarMoeda(calcularTotalGrupo(lista)) }}</span>
+                        </div>
+                    </div>
+
+                    <!-- CORPO DO GRUPO (EFEITO SANFONA) -->
+                    <transition name="slide-fade">
+                        <div v-show="gruposExpandidos[categoria]" class="bg-slate-50/50 border-t border-slate-100">
+                            <table class="w-full text-left">
+                                <thead class="bg-slate-100/50 text-[10px] uppercase font-black text-slate-400 tracking-widest">
+                                    <tr>
+                                        <th class="p-4 pl-8 lg:pl-16">Data Compra</th>
+                                        <th class="p-4">Vencimento</th>
+                                        <th class="p-4">Descrição</th>
+                                        <th class="p-4">Subgrupo</th>
+                                        <th class="p-4">Conta</th>
+                                        <th class="p-4 text-right">Valor</th>
+                                        <th class="p-4 text-center">Status</th>
+                                        <th class="p-4 pr-8 text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-xs font-semibold text-slate-600 divide-y divide-slate-100/50">
+                                    <tr v-for="d in lista" :key="d.id" class="hover:bg-white transition-colors">
+                                        <td class="p-4 pl-8 lg:pl-16 text-indigo-500 font-bold">{{ formatarData(d.purchase_date) }}</td>
+                                        <td class="p-4">{{ formatarData(d.date) }}</td>
+                                        <td class="p-4 font-black text-slate-800 uppercase">{{ d.description }}</td>
+                                        <td class="p-4">
+                                            <span v-if="d.subgroup" class="flex items-center gap-1.5" :class="isItemMatriz(d.category_id, d.subgroup) ? 'text-emerald-600 font-bold' : ''">
+                                                {{ d.subgroup }}
+                                                <i v-if="isItemMatriz(d.category_id, d.subgroup)" data-lucide="clipboard-check" class="w-3 h-3 text-emerald-500" title="Item da Matriz de Compromissos"></i>
+                                            </span>
+                                            <span v-else class="text-slate-300">--</span>
+                                        </td>
+                                        <td class="p-4">{{ d.account_name || '--' }}</td>
+                                        <td class="p-4 text-right font-black text-rose-500">{{ formatarMoeda(d.amount) }}</td>
+                                        <td class="p-4 text-center">
+                                            <button @click="alternarStatus(d)" class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest transition-all shadow-sm border"
+                                                    :class="d.is_paid ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100'">
+                                                {{ d.is_paid ? 'Liquidado' : 'Pendente' }}
+                                            </button>
+                                        </td>
+                                        <td class="p-4 pr-8 text-right flex justify-end gap-2">
+                                            <button @click="abrirEdicao(d)" class="p-2 text-slate-400 bg-white border border-slate-200 hover:border-indigo-200 hover:text-indigo-600 rounded-lg shadow-sm transition-all" title="Editar"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                                            <button @click="excluirDespesa(d.id)" class="p-2 text-slate-400 bg-white border border-slate-200 hover:border-rose-200 hover:text-rose-600 rounded-lg shadow-sm transition-all" title="Excluir"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </transition>
                 </div>
             </div>
         </div>
 
-        <transition name="fade-slide">
+        <!-- MODAL DE EDIÇÃO -->
+        <transition name="modal">
             <div v-if="modalEdit.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                <div class="bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col border border-slate-100">
-                    <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div class="bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl">
+                    <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                         <div>
-                            <h3 class="font-black text-slate-900 uppercase tracking-tighter text-xl leading-none">Editar Lançamento</h3>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase mt-2 tracking-widest">Ajuste os dados da despesa</p>
+                            <h3 class="font-black text-slate-900 uppercase tracking-tighter text-xl">Editar Despesa</h3>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-widest">Ajuste de Lançamento</p>
                         </div>
-                        <button @click="fecharEdicao" class="w-10 h-10 flex items-center justify-center hover:bg-white rounded-2xl transition-all shadow-sm border border-transparent hover:border-slate-200"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button>
+                        <button @click="fecharEdicao" class="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-100 rounded-xl transition-all"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button>
                     </div>
                     
-                    <div class="p-8 space-y-6">
-                        <div v-if="modalEdit.form.installment_group_id" class="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-start gap-3 mb-2">
-                            <i data-lucide="alert-circle" class="w-5 h-5 text-amber-500 mt-0.5"></i>
-                            <div>
-                                <p class="text-xs font-bold text-amber-800 uppercase tracking-widest mb-1">Atenção: Despesa Parcelada</p>
-                                <p class="text-xs text-amber-600 font-medium">Você está editando apenas esta parcela específica. Para alterar toda a compra, recomenda-se excluir os lançamentos e refazê-los.</p>
-                            </div>
-                        </div>
-
+                    <form @submit.prevent="salvarEdicao" class="p-8 space-y-6">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="input-group md:col-span-2">
+                            <div class="input-group">
                                 <label>Descrição</label>
-                                <input v-model="modalEdit.form.description" type="text" class="premium-input">
+                                <input v-model="modalEdit.form.description" type="text" required class="premium-input bg-white">
                             </div>
                             <div class="input-group">
-                                <label>Valor (R$)</label>
-                                <input v-model="modalEdit.form.amount" type="number" step="0.01" class="premium-input">
+                                <label>Valor</label>
+                                <input v-model.number="modalEdit.form.amount" type="number" step="0.01" required class="premium-input bg-white text-rose-600">
                             </div>
                             <div class="input-group">
-                                <label>Data do Vencimento / Execução</label>
-                                <input v-model="modalEdit.form.date" type="date" class="premium-input">
+                                <label>Data Pagamento</label>
+                                <input v-model="modalEdit.form.date" type="date" required class="premium-input bg-white text-xs">
                             </div>
                             <div class="input-group">
-                                <label>Conta / Cartão</label>
-                                <select v-model="modalEdit.form.account_id" class="premium-input">
-                                    <option v-for="c in contas" :key="c.id" :value="c.id">{{ c.name }}</option>
-                                </select>
+                                <label>Data Compra</label>
+                                <input v-model="modalEdit.form.purchase_date" type="date" required class="premium-input text-xs text-indigo-600 bg-indigo-50 border-indigo-100">
                             </div>
                             <div class="input-group">
-                                <label>Grupo de Despesa</label>
-                                <select v-model="modalEdit.form.category_id" class="premium-input">
-                                    <option v-for="cat in categorias" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                                <label>Grupo</label>
+                                <select v-model="modalEdit.form.category_id" required class="premium-input bg-white">
+                                    <option v-for="c in categorias" :key="c.id" :value="c.id">{{ c.name }}</option>
                                 </select>
                             </div>
                             <div class="input-group">
                                 <label>Subgrupo</label>
-                                <select v-model="modalEdit.form.subgroup" class="premium-input">
-                                    <option value="">Nenhum / Opcional</option>
-                                    <option v-for="sub in subgruposEditFormatados" :key="sub" :value="sub">{{ sub }}</option>
+                                <select v-model="modalEdit.form.subgroup" class="premium-input bg-white">
+                                    <option value="">Geral</option>
+                                    <option v-for="s in subgruposEditFormatados" :key="s" :value="s">{{ s }}</option>
                                 </select>
                             </div>
-                            <div class="input-group flex items-end pb-2">
-                                <label class="flex items-center gap-3 cursor-pointer">
-                                    <input type="checkbox" v-model="modalEdit.form.is_paid" class="w-5 h-5 rounded-lg text-emerald-500 border-slate-300">
-                                    <span class="text-xs font-black uppercase text-slate-600">Marcado como Pago</span>
-                                </label>
-                            </div>
                         </div>
-                    </div>
-
-                    <div class="p-8 bg-slate-50/50 pt-6">
-                        <button @click="salvarEdicao" :disabled="loading" class="w-full btn-confirm disabled:opacity-50">
-                            {{ loading ? 'Processando...' : 'Salvar Alterações' }}
-                        </button>
-                    </div>
+                        <div class="pt-4 border-t border-slate-100 flex justify-end gap-3">
+                            <button type="button" @click="fecharEdicao" class="px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-widest text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors">Cancelar</button>
+                            <button type="submit" :disabled="loading" class="px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-widest text-white bg-indigo-600 hover:bg-indigo-700 shadow-md transition-all">Salvar Alterações</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </transition>
+
     </div>
 
     <script>
-        const { createApp, ref, onMounted, computed, nextTick, watch } = Vue;
+        const { createApp, ref, onMounted, computed, watch, nextTick } = Vue;
 
         createApp({
             setup() {
@@ -338,28 +397,113 @@
                 const contas = ref([]);
                 const categorias = ref([]);
                 const despesas = ref([]);
-                const checklistConfig = ref([]); // Guarda as configurações da Matriz
+                const checklistConfig = ref([]);
                 
                 const hoje = new Date();
                 const mesReferencia = ref(hoje.getMonth() + 1);
                 const anoReferencia = ref(hoje.getFullYear());
 
-                const form = ref({
-                    description: '', amount: null,
-                    due_date: new Date().toISOString().substr(0, 10),
-                    purchase_date: new Date().toISOString().substr(0, 10),
-                    account_id: '', category_id: '', subgroup: '',
-                    is_credit: false, installments: 1, is_paid: true // Padrão: Pago
+                const nomeMesReferencia = computed(() => {
+                    const data = new Date(anoReferencia.value, mesReferencia.value - 1, 1);
+                    return new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(data);
+                });
+
+                // Controle de Divulgação Progressiva
+                const gruposExpandidos = ref({});
+
+                const toggleGrupo = (categoria) => {
+                    gruposExpandidos.value[categoria] = !gruposExpandidos.value[categoria];
+                    nextTick(() => lucide.createIcons());
+                };
+
+                const expandirTudo = () => {
+                    const temp = {};
+                    Object.keys(despesasAgrupadas.value).forEach(cat => temp[cat] = true);
+                    gruposExpandidos.value = temp;
+                };
+
+                const recolherTudo = () => { gruposExpandidos.value = {}; };
+
+                // ESTADO DO FORMULÁRIO (RESTAURADO)
+                const formDefault = () => {
+                    const d = new Date().toISOString().split('T')[0];
+                    return { 
+                        description: '', amount: '', date: d, purchase_date: d, 
+                        type: 'expense', category_id: '', account_id: '', subgroup: '', 
+                        is_paid: true, is_credit: false, installments: 1 
+                    };
+                };
+                const form = ref(formDefault());
+
+                // Lógica Inteligente para Parcelamento/Crédito
+                watch(() => form.value.is_credit, (newVal) => {
+                    if (newVal) {
+                        form.value.is_paid = false; // Compras no crédito nascem pendentes
+                        if (form.value.installments < 1) form.value.installments = 1;
+                    } else {
+                        form.value.installments = 1;
+                    }
                 });
 
                 const modalEdit = ref({ show: false, form: {} });
 
-                const nomeMesReferencia = computed(() => new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date(anoReferencia.value, mesReferencia.value - 1)));
-                
-                // Divisão do Orçamento (Projetado = Tudo | Pago = is_paid 1 | Pendente = is_paid 0)
-                const totalMes = computed(() => despesas.value.reduce((acc, curr) => acc + curr.amount, 0));
-                const totalPago = computed(() => despesas.value.filter(d => d.is_paid === 1).reduce((acc, curr) => acc + curr.amount, 0));
-                const totalPendente = computed(() => despesas.value.filter(d => d.is_paid === 0).reduce((acc, curr) => acc + curr.amount, 0));
+                const carregarDados = async () => {
+                    loading.value = true;
+                    try {
+                        const [resContas, resCat, resDespesas, resCheck] = await Promise.all([
+                            fetch('http://localhost:3000/api/configuracoes?type=Conta'),
+                            fetch('http://localhost:3000/api/configuracoes?type=GrupoDespesa'),
+                            fetch(`http://localhost:3000/api/despesas?mes=${mesReferencia.value}&ano=${anoReferencia.value}`),
+                            fetch('http://localhost:3000/api/checklist/config')
+                        ]);
+                        contas.value = await resContas.json();
+                        categorias.value = await resCat.json();
+                        despesas.value = await resDespesas.json();
+                        checklistConfig.value = await resCheck.json();
+                        
+                        // REMOVIDO: recolherTudo(); -> Mantém a posição das gavetas ao recarregar
+                        nextTick(() => lucide.createIcons());
+                    } catch (e) { console.error(e); } finally { loading.value = false; }
+                };
+
+                const mudarMes = (delta) => {
+                    let m = mesReferencia.value + delta;
+                    let a = anoReferencia.value;
+                    if (m > 12) { m = 1; a++; }
+                    else if (m < 1) { m = 12; a--; }
+                    mesReferencia.value = m;
+                    anoReferencia.value = a;
+                    
+                    recolherTudo(); // Auto-limpeza das gavetas APENAS ao trocar de mês
+                    carregarDados();
+                };
+
+                const parseSubgroups = (str) => {
+                    if (!str) return [];
+                    const s = str.toString().trim();
+                    if (s.startsWith('{') || s.startsWith('[')) {
+                        try {
+                            const parsed = JSON.parse(s);
+                            if (Array.isArray(parsed)) return parsed.map(x => x.name || x);
+                            return [parsed.name || s];
+                        } catch (e) {}
+                    }
+                    return s.split(',').map(x => x.trim()).filter(x => x !== '');
+                };
+
+                const subgruposFormatados = computed(() => {
+                    if (!form.value.category_id) return [];
+                    const cat = categorias.value.find(c => c.id === form.value.category_id);
+                    return cat ? parseSubgroups(cat.subgroups) : [];
+                });
+
+                const subgruposEditFormatados = computed(() => {
+                    if (!modalEdit.value.form.category_id) return [];
+                    const cat = categorias.value.find(c => c.id === modalEdit.value.form.category_id);
+                    return cat ? parseSubgroups(cat.subgroups) : [];
+                });
+
+                const onCategoryChange = () => { form.value.subgroup = ''; };
 
                 const despesasAgrupadas = computed(() => {
                     const grupos = {};
@@ -368,106 +512,63 @@
                         if (!grupos[cat]) grupos[cat] = [];
                         grupos[cat].push(d);
                     });
-                    return grupos;
+                    return Object.keys(grupos).sort().reduce((acc, key) => {
+                        acc[key] = grupos[key];
+                        return acc;
+                    }, {});
                 });
 
-                const parserSubgrupos = (catId) => {
-                    const cat = categorias.value.find(c => c.id === catId);
-                    if (!cat || !cat.subgroups) return [];
-                    const raw = cat.subgroups;
-                    if (typeof raw === 'string' && (raw.startsWith('[') || raw.startsWith('{'))) {
-                        try {
-                            const parsed = JSON.parse(raw);
-                            if (Array.isArray(parsed)) return parsed.map(s => s.name || s);
-                            return [parsed.name || raw];
-                        } catch (e) { return [raw]; }
-                    }
-                    return raw.split(',').map(s => s.trim()).filter(s => s !== '');
+                const isItemMatriz = (catId, sub) => {
+                    if (!sub) return false;
+                    return checklistConfig.value.some(i => i.category_id === catId && i.subgroup_name.toLowerCase() === sub.toLowerCase());
                 };
 
-                const subgruposFormatados = computed(() => parserSubgrupos(form.value.category_id));
-                const subgruposEditFormatados = computed(() => parserSubgrupos(modalEdit.value.form.category_id));
-
-                const carregarDados = async () => {
-                    try {
-                        const [resC, resD, resT, resCheck] = await Promise.all([
-                            fetch('http://localhost:3000/api/configuracoes?type=Conta'),
-                            fetch('http://localhost:3000/api/configuracoes?type=GrupoDespesa'),
-                            fetch(`http://localhost:3000/api/despesas?mes=${mesReferencia.value}&ano=${anoReferencia.value}`),
-                            fetch('http://localhost:3000/api/checklist/config') // Puxa os itens da Matriz
-                        ]);
-                        contas.value = await resC.json();
-                        categorias.value = await resD.json();
-                        despesas.value = await resT.json();
-                        checklistConfig.value = await resCheck.json();
-                        nextTick(() => lucide.createIcons());
-                    } catch (e) { console.error(e); }
-                };
-
-                // Verifica se a seleção atual do formulário é um item controlado pela Matriz
-                const isItemMatriz = computed(() => {
-                    if (!form.value.category_id) return false;
-                    const catId = form.value.category_id;
-                    const sub = form.value.subgroup || '';
-                    return checklistConfig.value.some(item => 
-                        item.category_id === catId && 
-                        (item.subgroup_name || '').toLowerCase() === sub.toLowerCase()
-                    );
-                });
-
-                // A mágica da UI: Auto-Toggle de Pagamento baseado na Matriz
-                watch(() => form.value.category_id, () => {
-                    form.value.is_paid = !isItemMatriz.value;
-                });
-                watch(() => form.value.subgroup, () => {
-                    form.value.is_paid = !isItemMatriz.value;
-                });
-
-                const mudarMes = (direcao) => {
-                    let novaData = new Date(anoReferencia.value, mesReferencia.value - 1 + direcao, 1);
-                    mesReferencia.value = novaData.getMonth() + 1;
-                    anoReferencia.value = novaData.getFullYear();
-                    carregarDados();
-                };
-
-                const calcularTotalGrupo = (itens) => itens.reduce((acc, curr) => acc + curr.amount, 0);
-                const onCategoryChange = () => { form.value.subgroup = ''; };
+                const calcularTotalGrupo = (lista) => lista.reduce((acc, curr) => acc + curr.amount, 0);
+                const totalMes = computed(() => despesas.value.reduce((acc, curr) => acc + curr.amount, 0));
+                const totalPago = computed(() => despesas.value.filter(d => d.is_paid).reduce((acc, curr) => acc + curr.amount, 0));
+                const totalPendente = computed(() => despesas.value.filter(d => !d.is_paid).reduce((acc, curr) => acc + curr.amount, 0));
 
                 const salvarDespesa = async () => {
-                    if (!form.value.description || !form.value.amount || !form.value.account_id) {
-                        alert("Preencha Descrição, Valor e Conta.");
-                        return;
-                    }
                     loading.value = true;
                     try {
+                        // Envia `due_date` para respeitar a estrutura original do backend POST
+                        const payload = { ...form.value, due_date: form.value.date };
                         const res = await fetch('http://localhost:3000/api/despesas', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(form.value)
+                            body: JSON.stringify(payload)
                         });
                         if (res.ok) {
-                            form.value.description = ''; form.value.amount = null; form.value.subgroup = '';
-                            form.value.is_credit = false; form.value.installments = 1; form.value.is_paid = true;
+                            form.value = formDefault();
                             await carregarDados();
-                        } else { alert("Erro no servidor."); }
+                        }
                     } catch (e) { alert("Erro de conexão."); } finally { loading.value = false; }
                 };
 
-                const alternarStatus = async (id) => {
-                    try {
-                        await fetch(`http://localhost:3000/api/despesas/${id}/status`, { method: 'PATCH' });
-                        carregarDados();
-                    } catch (e) { console.error("Erro ao alterar status"); }
-                };
-
                 const excluirDespesa = async (id) => {
-                    if (!confirm("Remover lançamento permanentemente?")) return;
-                    await fetch(`http://localhost:3000/api/despesas/${id}`, { method: 'DELETE' });
-                    carregarDados();
+                    if (!confirm("Excluir este lançamento?")) return;
+                    loading.value = true;
+                    try {
+                        const res = await fetch(`http://localhost:3000/api/despesas/${id}`, { method: 'DELETE' });
+                        if (res.ok) await carregarDados();
+                    } catch (e) { alert("Erro de conexão."); } finally { loading.value = false; }
                 };
 
-                const abrirEdicao = (d) => {
-                    modalEdit.value.form = { ...d, is_paid: d.is_paid === 1 };
+                const alternarStatus = async (despesa) => {
+                    const novoStatus = !despesa.is_paid;
+                    try {
+                        const payload = { ...despesa, is_paid: novoStatus };
+                        const res = await fetch(`http://localhost:3000/api/despesas/${despesa.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (res.ok) await carregarDados();
+                    } catch (e) { alert("Erro ao alterar status."); }
+                };
+
+                const abrirEdicao = (despesa) => {
+                    modalEdit.value.form = { ...despesa };
                     modalEdit.value.show = true;
                     nextTick(() => lucide.createIcons());
                 };
@@ -475,7 +576,6 @@
                 const fecharEdicao = () => { modalEdit.value.show = false; };
 
                 const salvarEdicao = async () => {
-                    if (!modalEdit.value.form.description || !modalEdit.value.form.amount || !modalEdit.value.form.account_id) return;
                     loading.value = true;
                     try {
                         const res = await fetch(`http://localhost:3000/api/despesas/${modalEdit.value.form.id}`, {
@@ -503,7 +603,8 @@
                     mesReferencia, anoReferencia, nomeMesReferencia, despesasAgrupadas,
                     mudarMes, calcularTotalGrupo, onCategoryChange, salvarDespesa, excluirDespesa, alternarStatus,
                     formatarMoeda, formatarData, isItemMatriz,
-                    modalEdit, abrirEdicao, fecharEdicao, salvarEdicao, subgruposEditFormatados
+                    modalEdit, abrirEdicao, fecharEdicao, salvarEdicao, subgruposEditFormatados,
+                    gruposExpandidos, toggleGrupo, expandirTudo, recolherTudo
                 };
             }
         }).mount('#app');
