@@ -42,7 +42,6 @@
         
         .chart-container { position: relative; height: 350px; width: 100%; }
         
-        /* Novas Caixas de Porcentagem */
         .pct-box {
             background: linear-gradient(145deg, #ffffff, #f8fafc);
             border: 1px solid #f1f5f9;
@@ -56,7 +55,7 @@
 
     <div id="app" class="max-w-6xl mx-auto h-screen flex flex-col">
         
-        <!-- Cabeçalho Principal e Navegação de Abas -->
+        <!-- Cabeçalho Principal -->
         <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-6 shrink-0">
             <div>
                 <h1 class="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Inteligência & BI</h1>
@@ -69,14 +68,12 @@
             </div>
         </div>
 
-        <!-- CONTEÚDO: TENDÊNCIA E MÉDIAS -->
         <transition name="fade" mode="out-in">
             <div v-if="abaAtual === 'tendencia'" class="grid grid-cols-1 lg:grid-cols-4 gap-8 flex-1 min-h-0">
                 
-                <!-- PAINEL ESQUERDO: Filtros e Métricas Estritas -->
+                <!-- PAINEL ESQUERDO: Filtros e Métricas -->
                 <div class="lg:col-span-1 space-y-6 overflow-y-auto custom-scroll pr-2 pb-10">
                     
-                    <!-- Filtros -->
                     <div class="premium-card p-6 space-y-5">
                         <div class="flex items-center gap-3 mb-2">
                             <div class="p-2 bg-blue-50 text-blue-600 rounded-xl"><i data-lucide="filter" class="w-4 h-4"></i></div>
@@ -115,7 +112,6 @@
                         </div>
                     </div>
 
-                    <!-- QUADRO DE MÉDIAS MENSAIS ESTRITAS -->
                     <div class="premium-card p-6 border-t-4 border-t-indigo-500">
                         <h4 class="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-6 flex items-center justify-between">
                             Médias do Período
@@ -133,7 +129,6 @@
                         </div>
                     </div>
 
-                    <!-- NOVO: IMPACTO / PORCENTAGENS -->
                     <div class="grid grid-cols-2 gap-3">
                         <div class="pct-box group hover:border-indigo-200 transition-colors">
                             <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 leading-tight">Impacto nas<br>Despesas</span>
@@ -158,14 +153,16 @@
                         <div class="flex justify-between items-start mb-8">
                             <div>
                                 <h2 class="text-xl font-black text-slate-800 uppercase italic tracking-tighter">Histórico Dinâmico</h2>
-                                <p class="text-xs text-slate-400 font-bold uppercase mt-1 tracking-widest">{{ filtroCategoria === 'all' ? 'Comparativo Entradas vs Saídas' : 'Evolução Específica do Grupo' }}</p>
+                                <p class="text-xs text-slate-400 font-bold uppercase mt-1 tracking-widest">
+                                    {{ viewType === 'consumo' ? 'Radar de Geração de Despesas' : (filtroCategoria === 'all' ? 'Comparativo Entradas vs Saídas' : 'Evolução Específica do Grupo') }}
+                                </p>
                             </div>
                             
                             <div v-if="loading" class="flex gap-2">
                                 <div class="w-2 h-2 rounded-full bg-blue-500 animate-ping"></div>
                             </div>
                             <div v-else class="flex gap-4">
-                                <label v-if="filtroCategoria !== 'all'" class="flex items-center gap-2 cursor-pointer bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">
+                                <label v-if="filtroCategoria !== 'all' || viewType === 'consumo'" class="flex items-center gap-2 cursor-pointer bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">
                                     <input type="checkbox" v-model="mostrarReceitas" @change="renderizarChartTrend" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500">
                                     <span class="text-[10px] font-black uppercase text-slate-600 tracking-wider">Exibir Receitas Base</span>
                                 </label>
@@ -183,9 +180,8 @@
                 </div>
             </div>
 
-            <!-- ABA BUSCA (Mantida igual) -->
+            <!-- ABA BUSCA -->
             <div v-else-if="abaAtual === 'extrato'" class="premium-card p-8 min-h-[500px]">
-                <!-- ... Código da aba de busca original mantido ... -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                     <div class="md:col-span-2">
                         <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 block mb-2">Termo de Busca Global</label>
@@ -202,7 +198,12 @@
                         <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 block mb-2">Até O Dia</label>
                         <input type="date" v-model="formBusca.dataFim" class="filter-select w-full">
                     </div>
-                    <div class="md:col-span-4 flex justify-end">
+                    
+                    <!-- BOTÕES DE AÇÃO: Buscar e Exportar CSV -->
+                    <div class="md:col-span-4 flex justify-end gap-4">
+                        <button v-show="resultadoBusca.length > 0" @click="exportarBuscaCSV" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-widest transition-colors flex items-center gap-2 shadow-lg shadow-emerald-200">
+                            <i data-lucide="download" class="w-4 h-4"></i> Exportar Filtro CSV
+                        </button>
                         <button @click="realizarBusca" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-widest transition-colors flex items-center gap-2 shadow-lg shadow-indigo-200">
                             <i data-lucide="search" class="w-4 h-4"></i> Pesquisar nos Registros
                         </button>
@@ -246,37 +247,28 @@
                 const viewType = ref('financeiro');
                 const loading = ref(false);
                 
-                // Variáveis da Aba Tendência
                 const filtroMeses = ref('6');
                 const datasTrend = ref({ inicio: '', fim: '' });
                 const filtroCategoria = ref('all');
                 const categoriasFiltro = ref([]);
                 const mostrarReceitas = ref(false);
                 
-                // Dados em Memória da API
                 const chartDataObj = ref([]);
                 const globalTotals = ref({ revenue: 0, expense: 0, divisorMeses: 1 });
                 const chartInstance = shallowRef(null);
                 
-                // Variáveis da Aba Busca
                 const loadingBusca = ref(false);
                 const formBusca = ref({ dataInicio: '', dataFim: '', texto: '' });
                 const resultadoBusca = ref([]);
 
-                // --- COMPUTEDS MATEMÁTICOS PARA O RELATÓRIO ---
                 const divisorMeses = computed(() => globalTotals.value.divisorMeses || 1);
                 
-                const totalFiltradoReceita = computed(() => {
-                    return chartDataObj.value.reduce((acc, curr) => acc + curr.revenue, 0);
-                });
-                const totalFiltradoDespesa = computed(() => {
-                    return chartDataObj.value.reduce((acc, curr) => acc + curr.expense, 0);
-                });
+                const totalFiltradoReceita = computed(() => chartDataObj.value.reduce((acc, curr) => acc + curr.revenue, 0));
+                const totalFiltradoDespesa = computed(() => chartDataObj.value.reduce((acc, curr) => acc + curr.expense, 0));
 
                 const mediaReceita = computed(() => totalFiltradoReceita.value / divisorMeses.value);
                 const mediaDespesa = computed(() => totalFiltradoDespesa.value / divisorMeses.value);
 
-                // Porcentagens Estratégicas
                 const percentualDespesa = computed(() => {
                     if (!globalTotals.value.expense || globalTotals.value.expense === 0) return '0.0';
                     return ((totalFiltradoDespesa.value / globalTotals.value.expense) * 100).toFixed(1);
@@ -284,7 +276,6 @@
 
                 const percentualReceita = computed(() => {
                     if (!globalTotals.value.revenue || globalTotals.value.revenue === 0) return '0.0';
-                    // Se o usuário filtrou receita, mostra o impacto na receita; senão o peso da despesa filtrada sobre a receita global
                     const valorAnalisado = totalFiltradoDespesa.value > 0 ? totalFiltradoDespesa.value : totalFiltradoReceita.value;
                     return ((valorAnalisado / globalTotals.value.revenue) * 100).toFixed(1);
                 });
@@ -311,9 +302,10 @@
                     loading.value = true;
                     try {
                         let query = `?months=${filtroMeses.value}&categoryId=${filtroCategoria.value}&viewType=${viewType.value}`;
-                        if (filtroMeses.value === 'custom') {
+                        if (filtroMeses.value === 'custom' && datasTrend.value.inicio && datasTrend.value.fim) {
                             query += `&inicio=${datasTrend.value.inicio}&fim=${datasTrend.value.fim}`;
                         }
+                        
                         const res = await fetch(`http://localhost:3000/api/relatorios/trend${query}`);
                         const json = await res.json();
                         
@@ -321,7 +313,8 @@
                         globalTotals.value = json.globalData || { revenue: 0, expense: 0, divisorMeses: 1 };
                         
                         renderizarChartTrend();
-                    } catch (e) { console.error(e); } finally { loading.value = false; }
+                    } catch (e) { console.error("Erro ao carregar tendência:", e); } 
+                    finally { loading.value = false; }
                 };
 
                 const renderizarChartTrend = () => {
@@ -337,21 +330,24 @@
                     });
 
                     const isEspecifco = filtroCategoria.value !== 'all';
+                    const isConsumo = viewType.value === 'consumo';
+                    
+                    const deveMostrarReceita = (!isEspecifco && !isConsumo) || mostrarReceitas.value;
 
                     const datasets = [];
 
-                    if (!isEspecifco || mostrarReceitas.value) {
+                    if (deveMostrarReceita) {
                         datasets.push({
                             label: 'Entradas (R$)',
                             data: chartDataObj.value.map(d => d.revenue),
-                            backgroundColor: isEspecifco ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.8)',
+                            backgroundColor: isEspecifco || isConsumo ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.8)',
                             borderColor: 'rgba(16, 185, 129, 1)',
-                            borderWidth: isEspecifco ? 2 : 0,
-                            borderRadius: isEspecifco ? 0 : 8,
-                            type: isEspecifco ? 'line' : 'bar',
+                            borderWidth: isEspecifco || isConsumo ? 2 : 0,
+                            borderRadius: isEspecifco || isConsumo ? 0 : 8,
+                            type: isEspecifco || isConsumo ? 'line' : 'bar',
                             tension: 0.4,
-                            fill: isEspecifco,
-                            borderDash: isEspecifco ? [5, 5] : []
+                            fill: isEspecifco || isConsumo,
+                            borderDash: isEspecifco || isConsumo ? [5, 5] : []
                         });
                     }
 
@@ -399,10 +395,6 @@
                     });
                 };
 
-                const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
-                const formatarData = (d) => d.split('-').reverse().join('/');
-
-                // Métodos da Busca Global
                 const totalBusca = computed(() => {
                     return resultadoBusca.value.reduce((acc, curr) => {
                         if (curr.type === 'revenue') acc.receita += curr.amount;
@@ -419,7 +411,61 @@
                     try {
                         const res = await fetch(`http://localhost:3000/api/relatorios/search?inicio=${formBusca.value.dataInicio}&fim=${formBusca.value.dataFim}&texto=${formBusca.value.texto}`);
                         resultadoBusca.value = await res.json();
+                        // Garante que o ícone do botão Exportar que acabou de aparecer seja renderizado
+                        setTimeout(() => lucide.createIcons(), 50);
                     } catch (e) { console.error(e); } finally { loadingBusca.value = false; }
+                };
+
+                // Nova Função: Exportar os dados filtrados para CSV
+                const exportarBuscaCSV = () => {
+                    if (resultadoBusca.value.length === 0) return;
+
+                    const colunas = ['Data Pagamento', 'Data Compra', 'Descrição', 'Valor', 'Tipo', 'Categoria', 'Subgrupo', 'Conta/Cartão'];
+                    let csvContent = colunas.join(';') + '\n';
+
+                    resultadoBusca.value.forEach(row => {
+                        const tipoBr = row.type === 'expense' ? 'Despesa' : 'Receita';
+                        const valorBr = row.amount.toFixed(2).replace('.', ',');
+                        
+                        // Protege textos contra quebras e ponto e vírgulas internos
+                        const desc = `"${(row.description || '').replace(/"/g, '""')}"`;
+                        const cat = `"${(row.category_name || '').replace(/"/g, '""')}"`;
+                        const sub = `"${(row.subgroup || '').replace(/"/g, '""')}"`;
+                        const conta = `"${(row.account_name || '').replace(/"/g, '""')}"`;
+                        
+                        const linha = [
+                            formatarData(row.date),
+                            formatarData(row.purchase_date),
+                            desc,
+                            valorBr,
+                            tipoBr,
+                            cat,
+                            sub,
+                            conta
+                        ];
+                        csvContent += linha.join(';') + '\n';
+                    });
+
+                    // Cria o Blob (arquivo em memória) garantindo a codificação UTF-8 para os acentos
+                    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', `Auditoria_Filtro_${formatarData(formBusca.value.dataInicio)}_a_${formatarData(formBusca.value.dataFim)}.csv`);
+                    link.style.visibility = 'hidden';
+                    
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                };
+
+                const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+                
+                // Função formatarData aprimorada (blinda contra valores vazios)
+                const formatarData = (d) => {
+                    if (!d) return '--';
+                    return d.split('-').reverse().join('/');
                 };
 
                 watch(abaAtual, (n) => { 
@@ -445,7 +491,7 @@
                     abaAtual, viewType, loading, filtroMeses, filtroCategoria, categoriasFiltro,
                     datasTrend, carregarRelatorioTrend, formatarMoeda, mediaReceita, mediaDespesa,
                     percentualDespesa, percentualReceita, divisorMeses,
-                    loadingBusca, formBusca, resultadoBusca, realizarBusca, totalBusca,
+                    loadingBusca, formBusca, resultadoBusca, realizarBusca, exportarBuscaCSV, totalBusca,
                     formatarData, semDadosTrend, mostrarReceitas, renderizarChartTrend, onCategoriaChange,
                     onFiltroMesesChange
                 };
