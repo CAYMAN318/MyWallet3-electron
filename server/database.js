@@ -10,22 +10,17 @@ const fs = require('fs');
 let dbPath;
 
 try {
-    // Tenta carregar o Electron para pegar o caminho de produção
     const { app } = require('electron');
-    // Se app estiver definido (estamos no processo principal do Electron)
     if (app) {
         const userDataPath = app.getPath('userData');
         dbPath = path.join(userDataPath, 'bd_gestor_financeiro.db');
     } else {
-        // Fallback para desenvolvimento (fora do Electron)
         dbPath = path.join(__dirname, '../bd_gestor_financeiro.db');
     }
 } catch (e) {
-    // Se falhar (ex: rodando testes ou script puro node), usa o local
     dbPath = path.join(__dirname, '../bd_gestor_financeiro.db');
 }
 
-// Garante que o diretório existe (importante no primeiro acesso em produção)
 const dbDir = path.dirname(dbPath);
 if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
@@ -39,21 +34,19 @@ db.pragma('foreign_keys = ON');
 
 /**
  * MOTOR DE MIGRAÇÃO (AUTO-REPARO)
- * Checa dinamicamente se as colunas criadas em versões mais novas
- * existem no banco do usuário. Se não existirem, ele injeta (ALTER TABLE).
+ * Adicionado a coluna 'installment_group_id' para a Doutrina Flexível de Parcelamentos
  */
 const garantirIntegridadeDoEsquema = () => {
     const tabelas = {
-        'Transactions': [
+        Transactions: [
             { name: 'purchase_date', type: 'TEXT' },
-            { name: 'installment_group_id', type: 'TEXT' },
             { name: 'subgroup', type: 'TEXT' },
-            { name: 'is_paid', type: 'INTEGER DEFAULT 0' }
+            { name: 'is_paid', type: 'INTEGER DEFAULT 1' },
+            { name: 'installment_group_id', type: 'TEXT' } // NOVA COLUNA DE BLINDAGEM
         ],
-        'Categories': [
-            { name: 'subgroups', type: 'TEXT DEFAULT ""' },
-            { name: 'color', type: 'TEXT DEFAULT "#ef4444"' },
-            { name: 'budget_limit', type: 'REAL DEFAULT NULL' } // <-- NOVO: Teto de Gastos
+        Categories: [
+            { name: 'budget_limit', type: 'REAL' },
+            { name: 'subgroups', type: 'TEXT' }
         ]
     };
 
@@ -64,10 +57,13 @@ const garantirIntegridadeDoEsquema = () => {
 
             tabelas[tabela].forEach(col => {
                 if (!colunasExistentes.includes(col.name)) {
+                    console.log(`[DB] Adicionando coluna ${col.name} na tabela ${tabela}...`);
                     db.prepare(`ALTER TABLE ${tabela} ADD COLUMN ${col.name} ${col.type}`).run();
                 }
             });
-        } catch (e) {}
+        } catch (e) {
+            console.error(`[DB] Erro ao verificar esquema da tabela ${tabela}:`, e);
+        }
     });
 };
 

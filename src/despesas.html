@@ -81,7 +81,6 @@
 </head>
 <body class="p-6">
 
-    <!-- Expandido para max-w-7xl e reduzido espaço vertical (space-y-6) para caber mais na tela -->
     <div id="app" v-cloak class="max-w-7xl mx-auto space-y-6">
         
         <!-- HEADER PRINCIPAL -->
@@ -99,13 +98,13 @@
         <div class="premium-card p-6 lg:p-8">
             <form @submit.prevent="salvarDespesa" class="grid grid-cols-1 md:grid-cols-12 gap-6">
                 
-                <!-- LINHA 1 -->
-                <div class="md:col-span-12 lg:col-span-4 input-group">
+                <!-- LINHA 1 (Reorganizada para focar no Ato da Compra) -->
+                <div class="md:col-span-12 lg:col-span-6 input-group">
                     <label>Descrição do Gasto</label>
                     <input v-model="form.description" type="text" required placeholder="Ex: Supermercado, Luz..." class="premium-input">
                 </div>
 
-                <div class="md:col-span-6 lg:col-span-2 input-group">
+                <div class="md:col-span-6 lg:col-span-3 input-group">
                     <label>Valor Total (R$)</label>
                     <input v-model.number="form.amount" type="number" step="0.01" required placeholder="0,00" class="premium-input text-rose-600">
                 </div>
@@ -114,13 +113,8 @@
                     <label>Data da Compra</label>
                     <input v-model="form.purchase_date" type="date" required class="premium-input text-xs text-indigo-600 bg-indigo-50 border-indigo-100" title="Data real em que o gasto foi feito (Competência)">
                 </div>
-
-                <div class="md:col-span-6 lg:col-span-3 input-group">
-                    <label>Primeiro Vencimento</label>
-                    <input v-model="form.date" type="date" required class="premium-input text-xs">
-                </div>
                 
-                <!-- LINHA 2 -->
+                <!-- LINHA 2 (Classificação) -->
                 <div class="md:col-span-6 lg:col-span-4 input-group">
                     <label>Grupo Pai</label>
                     <select v-model="form.category_id" @change="onCategoryChange" required class="premium-input">
@@ -145,10 +139,20 @@
                     </select>
                 </div>
 
-                <!-- LINHA 3: CONTROLES DE PARCELAMENTO E STATUS -->
-                <div class="md:col-span-12 flex flex-wrap lg:flex-nowrap items-center justify-between gap-6 p-5 bg-slate-50 border border-slate-100 rounded-[1.5rem]">
+                <!-- LINHA 3: CENTRO DE LIQUIDAÇÃO (Vencimento + Status + Parcelamento) -->
+                <div class="md:col-span-12 flex flex-wrap xl:flex-nowrap items-center justify-between gap-6 p-4 bg-slate-50 border border-slate-100 rounded-[1.5rem]">
                     
-                    <div class="flex gap-8">
+                    <div class="flex flex-wrap lg:flex-nowrap items-center gap-6 w-full xl:w-auto">
+                        
+                        <!-- NOVO LOCAL DO VENCIMENTO -->
+                        <div class="input-group mb-0 w-full lg:w-auto">
+                            <label class="!mb-1 !text-indigo-500">1º Vencimento</label>
+                            <input v-model="form.date" type="date" required class="premium-input !py-2.5 text-xs bg-white border-white shadow-sm">
+                        </div>
+
+                        <!-- Divisor Visual (apenas telas grandes) -->
+                        <div class="hidden lg:block w-px h-8 bg-slate-200"></div>
+
                         <!-- Toggle: Crédito / Prazo -->
                         <label class="flex items-center gap-3 cursor-pointer group">
                             <div class="relative">
@@ -161,14 +165,14 @@
                             </span>
                         </label>
 
-                        <!-- Input: Qtd Parcelas (Mantido em 1 por padrão) -->
+                        <!-- Input: Qtd Parcelas -->
                         <div v-if="form.is_credit" class="flex items-center gap-3 animate-fade-in">
                             <label class="text-[10px] font-black uppercase tracking-widest text-indigo-500">Qtd. Parcelas:</label>
-                            <input v-model.number="form.installments" type="number" min="1" max="72" required class="w-20 px-3 py-1.5 rounded-xl border border-indigo-200 bg-white text-sm font-bold text-indigo-700 outline-none focus:border-indigo-500">
+                            <input v-model.number="form.installments" type="number" min="1" max="72" required class="w-16 px-3 py-1.5 rounded-xl border border-indigo-200 bg-white text-sm font-bold text-indigo-700 outline-none focus:border-indigo-500">
                         </div>
 
                         <!-- Toggle: Pago vs Pendente -->
-                        <label v-if="!form.is_credit" class="flex items-center gap-3 cursor-pointer group animate-fade-in border-l border-slate-200 pl-8">
+                        <label v-if="!form.is_credit" class="flex items-center gap-3 cursor-pointer group animate-fade-in lg:border-l border-slate-200 lg:pl-6">
                             <div class="relative">
                                 <input type="checkbox" v-model="form.is_paid" class="sr-only">
                                 <div class="w-12 h-6 bg-slate-200 rounded-full shadow-inner transition-colors" :class="{ 'bg-emerald-500': form.is_paid }"></div>
@@ -180,8 +184,8 @@
                         </label>
                     </div>
 
-                    <div class="flex-1 flex justify-end">
-                        <button type="submit" :disabled="loading" class="btn-primary w-full md:w-auto flex justify-center items-center gap-2">
+                    <div class="flex-1 flex justify-end w-full xl:w-auto mt-2 xl:mt-0">
+                        <button type="submit" :disabled="loading" class="btn-primary w-full xl:w-auto flex justify-center items-center gap-2">
                             <i data-lucide="plus-circle" class="w-5 h-5"></i>
                             {{ loading ? 'Salvando...' : 'Lançar Despesa' }}
                         </button>
@@ -191,10 +195,9 @@
             </form>
         </div>
 
-        <!-- BARRA DE CONTROLE TÁTICO: COMPACTADA NA MESMA LINHA -->
+        <!-- BARRA DE CONTROLE TÁTICO -->
         <div class="flex flex-col lg:flex-row items-stretch gap-4 w-full h-auto">
             
-            <!-- RESUMO DO MÊS (Esquerda) -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full lg:flex-1">
                 <div class="premium-card p-3 flex justify-between items-center border-l-4 border-l-rose-500">
                     <div>
@@ -221,7 +224,6 @@
                 </div>
             </div>
 
-            <!-- NAVBAR DE NAVEGAÇÃO (Direita) - Integrada e Minimalista -->
             <div class="flex items-center justify-center gap-3 bg-white px-4 py-2 rounded-[1.5rem] shadow-sm border border-slate-100 shrink-0 w-full lg:w-auto h-full min-h-[64px]">
                 <button @click="mudarMes(-1)" class="p-1.5 hover:bg-slate-50 rounded-xl transition-all border border-slate-200 text-slate-400 hover:text-indigo-600 shadow-sm">
                     <i data-lucide="chevron-left" class="w-4 h-4"></i>
@@ -240,10 +242,9 @@
             
         </div>
 
-        <!-- EXTRATO DE LANÇAMENTOS (COM DIVULGAÇÃO PROGRESSIVA) -->
+        <!-- EXTRATO DE LANÇAMENTOS -->
         <div class="premium-card overflow-hidden">
             
-            <!-- Controle Global -->
             <div class="p-6 lg:p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                 <div>
                     <h3 class="font-black text-slate-800 uppercase text-xs tracking-widest">Extrato de Lançamentos</h3>
@@ -269,7 +270,6 @@
                 
                 <div v-for="(lista, categoria) in despesasAgrupadas" :key="categoria" class="group">
                     
-                    <!-- CABEÇALHO DO GRUPO (CLICÁVEL) -->
                     <div @click="toggleGrupo(categoria)" class="px-6 lg:px-8 py-4 bg-white hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors">
                         <div class="flex items-center gap-4">
                             <div class="w-6 h-6 flex items-center justify-center rounded bg-slate-100 text-slate-400 transition-transform duration-300" :class="{ 'rotate-180': gruposExpandidos[categoria] }">
@@ -284,7 +284,6 @@
                         </div>
                     </div>
 
-                    <!-- CORPO DO GRUPO (EFEITO SANFONA) -->
                     <transition name="slide-fade">
                         <div v-show="gruposExpandidos[categoria]" class="bg-slate-50/50 border-t border-slate-100">
                             <table class="w-full text-left">
@@ -322,7 +321,7 @@
                                         </td>
                                         <td class="p-4 pr-8 text-right flex justify-end gap-2">
                                             <button @click="abrirEdicao(d)" class="p-2 text-slate-400 bg-white border border-slate-200 hover:border-indigo-200 hover:text-indigo-600 rounded-lg shadow-sm transition-all" title="Editar"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
-                                            <button @click="excluirDespesa(d.id)" class="p-2 text-slate-400 bg-white border border-slate-200 hover:border-rose-200 hover:text-rose-600 rounded-lg shadow-sm transition-all" title="Excluir"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                                            <button @click="iniciarExclusao(d)" class="p-2 text-slate-400 bg-white border border-slate-200 hover:border-rose-200 hover:text-rose-600 rounded-lg shadow-sm transition-all" title="Excluir"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -386,6 +385,36 @@
             </div>
         </transition>
 
+        <!-- MODAL DE DECISÃO (DOUTRINA FLEXÍVEL) -->
+        <transition name="modal">
+            <div v-if="modalDelete.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                <div class="bg-white rounded-[2rem] w-full max-w-md overflow-hidden shadow-2xl transform transition-all">
+                    <div class="p-8 text-center">
+                        <div class="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
+                            <i data-lucide="alert-triangle" class="w-8 h-8 text-rose-600"></i>
+                        </div>
+                        <h3 class="text-xl font-black text-slate-900 tracking-tight uppercase">Exclusão de Parcelamento</h3>
+                        <p class="text-sm text-slate-500 mt-3 font-medium">O lançamento <span class="font-bold text-slate-800">"{{ modalDelete.despesa.description }}"</span> faz parte de uma compra parcelada.</p>
+                        <p class="text-[10px] bg-rose-50 text-rose-600 p-2 rounded-lg mt-4 font-bold uppercase tracking-widest border border-rose-100">O que você deseja fazer?</p>
+                    </div>
+                    
+                    <div class="p-6 bg-slate-50 border-t border-slate-100 flex flex-col gap-3">
+                        <button @click="confirmarExclusao(false)" class="w-full px-4 py-3 bg-white border border-slate-200 hover:bg-slate-100 hover:border-slate-300 rounded-xl font-bold text-xs uppercase tracking-widest text-slate-700 transition-colors shadow-sm flex items-center justify-center gap-2">
+                            <i data-lucide="minus-circle" class="w-4 h-4 text-slate-400"></i> Excluir APENAS esta parcela
+                        </button>
+                        
+                        <button @click="confirmarExclusao(true)" class="w-full px-4 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md shadow-rose-200 flex items-center justify-center gap-2">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i> Excluir TODAS as parcelas
+                        </button>
+                        
+                        <button @click="modalDelete.show = false" class="w-full mt-2 px-4 py-2 text-[10px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-colors">
+                            Cancelar Operação
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
     </div>
 
     <script>
@@ -408,7 +437,6 @@
                     return new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(data);
                 });
 
-                // Controle de Divulgação Progressiva
                 const gruposExpandidos = ref({});
 
                 const toggleGrupo = (categoria) => {
@@ -424,7 +452,6 @@
 
                 const recolherTudo = () => { gruposExpandidos.value = {}; };
 
-                // ESTADO DO FORMULÁRIO (RESTAURADO)
                 const formDefault = () => {
                     const d = new Date().toISOString().split('T')[0];
                     return { 
@@ -435,10 +462,9 @@
                 };
                 const form = ref(formDefault());
 
-                // Lógica Inteligente para Parcelamento/Crédito
                 watch(() => form.value.is_credit, (newVal) => {
                     if (newVal) {
-                        form.value.is_paid = false; // Compras no crédito nascem pendentes
+                        form.value.is_paid = false;
                         if (form.value.installments < 1) form.value.installments = 1;
                     } else {
                         form.value.installments = 1;
@@ -446,6 +472,7 @@
                 });
 
                 const modalEdit = ref({ show: false, form: {} });
+                const modalDelete = ref({ show: false, despesa: null });
 
                 const carregarDados = async () => {
                     loading.value = true;
@@ -461,7 +488,6 @@
                         despesas.value = await resDespesas.json();
                         checklistConfig.value = await resCheck.json();
                         
-                        // REMOVIDO: recolherTudo(); -> Mantém a posição das gavetas ao recarregar
                         nextTick(() => lucide.createIcons());
                     } catch (e) { console.error(e); } finally { loading.value = false; }
                 };
@@ -474,7 +500,7 @@
                     mesReferencia.value = m;
                     anoReferencia.value = a;
                     
-                    recolherTudo(); // Auto-limpeza das gavetas APENAS ao trocar de mês
+                    recolherTudo();
                     carregarDados();
                 };
 
@@ -531,7 +557,6 @@
                 const salvarDespesa = async () => {
                     loading.value = true;
                     try {
-                        // Envia `due_date` para respeitar a estrutura original do backend POST
                         const payload = { ...form.value, due_date: form.value.date };
                         const res = await fetch('http://localhost:3000/api/despesas', {
                             method: 'POST',
@@ -545,11 +570,28 @@
                     } catch (e) { alert("Erro de conexão."); } finally { loading.value = false; }
                 };
 
-                const excluirDespesa = async (id) => {
-                    if (!confirm("Excluir este lançamento?")) return;
+                const iniciarExclusao = (despesa) => {
+                    if (despesa.installment_group_id) {
+                        modalDelete.value.despesa = despesa;
+                        modalDelete.value.show = true;
+                        nextTick(() => lucide.createIcons());
+                    } else {
+                        if (confirm("Excluir definitivamente este lançamento?")) {
+                            executarExclusaoAPI(despesa.id, false);
+                        }
+                    }
+                };
+
+                const confirmarExclusao = (deleteAll) => {
+                    const id = modalDelete.value.despesa.id;
+                    modalDelete.value.show = false;
+                    executarExclusaoAPI(id, deleteAll);
+                };
+
+                const executarExclusaoAPI = async (id, deleteAll) => {
                     loading.value = true;
                     try {
-                        const res = await fetch(`http://localhost:3000/api/despesas/${id}`, { method: 'DELETE' });
+                        const res = await fetch(`http://localhost:3000/api/despesas/${id}?deleteAll=${deleteAll}`, { method: 'DELETE' });
                         if (res.ok) await carregarDados();
                     } catch (e) { alert("Erro de conexão."); } finally { loading.value = false; }
                 };
@@ -601,10 +643,11 @@
                 return { 
                     loading, contas, categorias, despesas, form, subgruposFormatados, totalMes, totalPago, totalPendente,
                     mesReferencia, anoReferencia, nomeMesReferencia, despesasAgrupadas,
-                    mudarMes, calcularTotalGrupo, onCategoryChange, salvarDespesa, excluirDespesa, alternarStatus,
+                    mudarMes, calcularTotalGrupo, onCategoryChange, salvarDespesa, iniciarExclusao, confirmarExclusao, alternarStatus,
                     formatarMoeda, formatarData, isItemMatriz,
                     modalEdit, abrirEdicao, fecharEdicao, salvarEdicao, subgruposEditFormatados,
-                    gruposExpandidos, toggleGrupo, expandirTudo, recolherTudo
+                    gruposExpandidos, toggleGrupo, expandirTudo, recolherTudo,
+                    modalDelete
                 };
             }
         }).mount('#app');
