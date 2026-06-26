@@ -35,15 +35,27 @@
 
     <div id="app" class="max-w-7xl mx-auto h-full flex flex-col">
         
-        <!-- Header -->
-        <header class="flex justify-between items-center mb-8">
+        <!-- Header com Máquina do Tempo -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
             <div>
                 <h1 class="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Centro de Comando</h1>
                 <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Visão Estratégica</p>
             </div>
-            <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-100">
-                <i data-lucide="calendar" class="w-4 h-4 text-indigo-500"></i>
-                <span class="font-black text-slate-700 text-sm uppercase tracking-widest">{{ nomeMesAtual }}</span>
+            
+            <div class="flex items-center justify-center gap-3 bg-white px-4 py-2 rounded-[1.5rem] shadow-sm border border-slate-100 shrink-0 min-h-[64px]">
+                <button @click="mudarMes(-1)" class="p-1.5 hover:bg-slate-50 rounded-xl transition-all border border-slate-200 text-slate-400 hover:text-indigo-600 shadow-sm" :disabled="loading">
+                    <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                </button>
+                <div class="text-center min-w-[120px]">
+                    <div class="flex items-center justify-center gap-1.5 mb-0.5">
+                        <i data-lucide="calendar" class="w-3 h-3 text-indigo-500"></i>
+                        <h3 class="font-black text-slate-800 uppercase text-[11px] tracking-widest">{{ nomeMesAtual }}</h3>
+                    </div>
+                    <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Ano {{ anoReferencia }}</p>
+                </div>
+                <button @click="mudarMes(1)" class="p-1.5 hover:bg-slate-50 rounded-xl transition-all border border-slate-200 text-slate-400 hover:text-indigo-600 shadow-sm" :disabled="loading">
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </button>
             </div>
         </header>
 
@@ -55,7 +67,7 @@
             
             <!-- Cards Principais (Totais) -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Saldo Atual (Com azul ainda mais suavizado) -->
+                <!-- Saldo Atual (Visão Global Estática) -->
                 <div class="card bg-gradient-to-br from-blue-400 to-indigo-400 rounded-3xl p-6 text-white shadow-lg shadow-indigo-100 flex flex-col justify-between relative overflow-hidden">
                     <div class="absolute -right-6 -top-6 w-32 h-32 bg-white opacity-10 rounded-full"></div>
                     <div class="flex justify-between items-start relative z-10">
@@ -65,12 +77,12 @@
                         <span class="bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest backdrop-blur-md text-white">Caixa Geral</span>
                     </div>
                     <div class="mt-8 relative z-10">
-                        <p class="text-indigo-50 text-xs font-bold uppercase tracking-widest mb-1">Saldo Acumulado</p>
+                        <p class="text-indigo-50 text-xs font-bold uppercase tracking-widest mb-1">Saldo Acumulado Absoluto</p>
                         <h2 class="text-3xl font-black tracking-tighter">{{ formatarMoeda(dados.saldoTotal) }}</h2>
                     </div>
                 </div>
 
-                <!-- Receitas do Mês -->
+                <!-- Receitas do Mês Selecionado -->
                 <div class="card bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center">
@@ -79,12 +91,12 @@
                         <span class="bg-slate-50 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">{{ nomeMesAtual }}</span>
                     </div>
                     <div class="mt-8">
-                        <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Entradas</p>
+                        <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Entradas Projetadas</p>
                         <h2 class="text-3xl font-black text-slate-800 tracking-tighter">+ {{ formatarMoeda(dados.resumoMes.receitas) }}</h2>
                     </div>
                 </div>
 
-                <!-- Despesas do Mês -->
+                <!-- Despesas do Mês Selecionado -->
                 <div class="card bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div class="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center">
@@ -93,22 +105,22 @@
                         <span class="bg-slate-50 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">{{ nomeMesAtual }}</span>
                     </div>
                     <div class="mt-8">
-                        <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Saídas</p>
+                        <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Saídas / Faturas</p>
                         <h2 class="text-3xl font-black text-slate-800 tracking-tighter">- {{ formatarMoeda(dados.resumoMes.despesas) }}</h2>
                     </div>
                 </div>
             </div>
 
-            <!-- Gráficos Analíticos (Movidos para cima) -->
+            <!-- Gráficos Analíticos -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
                 <!-- Distribuição por Categoria (Rosca) -->
                 <div class="card bg-white rounded-3xl p-8 border border-slate-100 shadow-sm flex flex-col">
-                    <h3 class="font-black text-slate-800 uppercase text-xs tracking-widest mb-6">Distribuição de Gastos</h3>
+                    <h3 class="font-black text-slate-800 uppercase text-xs tracking-widest mb-6">Distribuição de Gastos Projetada</h3>
                     
                     <div v-if="!temDadosCategorias" class="flex-1 flex flex-col items-center justify-center text-slate-400">
                         <i data-lucide="pie-chart" class="w-12 h-12 opacity-20 mb-3"></i>
-                        <p class="text-xs font-bold uppercase tracking-widest">Sem despesas no mês</p>
+                        <p class="text-xs font-bold uppercase tracking-widest">Sem despesas registradas para este período</p>
                     </div>
                     <div v-else class="relative h-64 w-full">
                         <canvas id="categoryChart"></canvas>
@@ -117,7 +129,7 @@
 
                 <!-- Evolução Histórica (Barras) -->
                 <div class="card bg-white rounded-3xl p-8 border border-slate-100 shadow-sm flex flex-col">
-                    <h3 class="font-black text-slate-800 uppercase text-xs tracking-widest mb-6">Evolução Semestral</h3>
+                    <h3 class="font-black text-slate-800 uppercase text-xs tracking-widest mb-6">Evolução do Semestre</h3>
                     <div class="relative h-64 w-full">
                         <canvas id="historyChart"></canvas>
                     </div>
@@ -125,7 +137,7 @@
 
             </div>
 
-            <!-- MATRIZ DE COMPROMISSOS (Movida para o meio) -->
+            <!-- MATRIZ DE COMPROMISSOS -->
             <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
                 <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                     <div>
@@ -182,7 +194,7 @@
                 </div>
             </div>
 
-            <!-- GESTÃO POR EXCEÇÃO: ALERTAS DE TETO DE GASTOS (Movido para o final) -->
+            <!-- GESTÃO POR EXCEÇÃO: ALERTAS DE TETO DE GASTOS -->
             <transition name="fade">
                 <div v-if="alertasOrcamento.length > 0" class="flex flex-col gap-4">
                     <div v-for="alerta in alertasOrcamento" :key="alerta.categoria" 
@@ -205,14 +217,14 @@
                                     Grupo: {{ alerta.categoria }}
                                 </h4>
                                 <p class="text-sm font-bold mt-0.5" :class="alerta.critico ? 'text-rose-700' : 'text-amber-700'">
-                                    {{ alerta.critico ? 'Teto Orçamentário Rompido' : 'Atenção ao Limite Definido' }} 
+                                    {{ alerta.critico ? 'Teto Orçamentário Rompido' : 'Atenção ao Limite Projetado' }} 
                                     <span class="opacity-75 font-black">({{ alerta.percentual }}%)</span>
                                 </p>
                             </div>
                         </div>
 
                         <div class="relative z-10 text-right">
-                            <p class="text-[9px] font-black uppercase tracking-widest mb-1" :class="alerta.critico ? 'text-rose-500' : 'text-amber-500'">Consumo Atual / Teto Máximo</p>
+                            <p class="text-[9px] font-black uppercase tracking-widest mb-1" :class="alerta.critico ? 'text-rose-500' : 'text-amber-500'">Consumo Previsto / Teto Máximo</p>
                             <p class="font-black text-xl" :class="alerta.critico ? 'text-rose-700' : 'text-amber-800'">
                                 {{ formatarMoeda(alerta.gasto) }} 
                                 <span class="text-sm opacity-50 font-bold">/ {{ formatarMoeda(alerta.limite) }}</span>
@@ -231,6 +243,12 @@
         createApp({
             setup() {
                 const loading = ref(true);
+                
+                // MÁQUINA DO TEMPO: Variáveis de Controle
+                const hoje = new Date();
+                const mesReferencia = ref(hoje.getMonth() + 1);
+                const anoReferencia = ref(hoje.getFullYear());
+
                 const dados = ref({
                     saldoTotal: 0,
                     resumoMes: { receitas: 0, despesas: 0, saldo: 0 },
@@ -239,35 +257,44 @@
                 });
                 
                 const matriz = ref([]);
-                const alertasOrcamento = ref([]); // Novo Ref para os Alertas
+                const alertasOrcamento = ref([]); 
                 let chartCatInstance = null;
                 let chartHistInstance = null;
 
-                const hoje = new Date();
                 const nomeMesAtual = computed(() => {
-                    return new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(hoje);
+                    const data = new Date(anoReferencia.value, mesReferencia.value - 1, 1);
+                    return new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(data);
                 });
 
                 const temDadosCategorias = computed(() => dados.value.graficoCategorias.length > 0);
 
+                const mudarMes = (delta) => {
+                    let m = mesReferencia.value + delta;
+                    let a = anoReferencia.value;
+                    if (m > 12) { m = 1; a++; }
+                    else if (m < 1) { m = 12; a--; }
+                    mesReferencia.value = m;
+                    anoReferencia.value = a;
+                    
+                    carregarDados();
+                };
+
                 const carregarDados = async () => {
+                    loading.value = true;
                     try {
                         const [resDash, resMatriz] = await Promise.all([
-                            fetch('http://localhost:3000/api/dashboard'),
-                            fetch(`http://localhost:3000/api/checklist/status?mes=${hoje.getMonth() + 1}&ano=${hoje.getFullYear()}`)
+                            fetch(`http://localhost:3000/api/dashboard?mes=${mesReferencia.value}&ano=${anoReferencia.value}`),
+                            fetch(`http://localhost:3000/api/checklist/status?mes=${mesReferencia.value}&ano=${anoReferencia.value}`)
                         ]);
                         
                         dados.value = await resDash.json();
                         matriz.value = await resMatriz.json();
                         
-                        // Captura os alertas calculados pelo backend
                         alertasOrcamento.value = dados.value.alertasOrcamento || [];
                         
                     } catch (error) {
                         console.error("Erro ao carregar Dashboard:", error);
                     } finally {
-                        // Correção da Race Condition: O 'loading' fica falso ANTES do nextTick, 
-                        // garantindo que as divs dos gráficos existam na tela para o Vue desenhar
                         loading.value = false;
                         nextTick(() => {
                             lucide.createIcons();
@@ -280,10 +307,9 @@
                     Chart.defaults.font.family = 'Inter';
                     Chart.defaults.color = '#94a3b8';
 
-                    // 1. Gráfico de Categorias (Rosca)
                     if (temDadosCategorias.value) {
                         const ctxCat = document.getElementById('categoryChart');
-                        if (!ctxCat) return; // Segurança extra
+                        if (!ctxCat) return; 
                         if (chartCatInstance) chartCatInstance.destroy();
                         
                         const bgColors = [
@@ -317,7 +343,6 @@
                         });
                     }
 
-                    // 2. Gráfico Histórico (Barras)
                     const ctxHist = document.getElementById('historyChart');
                     if (ctxHist) {
                         if (chartHistInstance) chartHistInstance.destroy();
@@ -363,7 +388,10 @@
 
                 onMounted(carregarDados);
 
-                return { loading, dados, matriz, alertasOrcamento, nomeMesAtual, temDadosCategorias, formatarMoeda };
+                return { 
+                    loading, dados, matriz, alertasOrcamento, nomeMesAtual, 
+                    anoReferencia, mudarMes, temDadosCategorias, formatarMoeda 
+                };
             }
         }).mount('#app');
     </script>

@@ -9,21 +9,31 @@ const queryAll = (sql, params = []) => {
 
 router.get('/', (req, res) => {
     try {
-        const hoje = new Date();
-        const anoAtual = hoje.getFullYear();
-        const mesAtual = hoje.getMonth(); // 0-11
+        // --- MÁQUINA DO TEMPO: Captura os parâmetros da URL ---
+        const reqMes = req.query.mes;
+        const reqAno = req.query.ano;
 
-        // Datas limites para consultas SQL (Mês Atual)
-        const inicioMes = new Date(anoAtual, mesAtual, 1).toISOString().split('T')[0];
-        const fimMes = new Date(anoAtual, mesAtual + 1, 0).toISOString().split('T')[0];
+        const hoje = new Date();
+        let anoRef = hoje.getFullYear();
+        let mesRef = hoje.getMonth(); // 0-11
+
+        // Se o frontend enviar mês e ano, viajamos no tempo
+        if (reqMes && reqAno) {
+            anoRef = parseInt(reqAno);
+            mesRef = parseInt(reqMes) - 1; // Ajuste pois o JS trabalha com meses de 0 a 11
+        }
+
+        // Datas limites para consultas SQL (Mês Selecionado)
+        const inicioMes = new Date(anoRef, mesRef, 1).toISOString().split('T')[0];
+        const fimMes = new Date(anoRef, mesRef + 1, 0).toISOString().split('T')[0];
         
-        // Data de corte para histórico (6 meses atrás)
+        // Data de corte para histórico (6 meses atrás, relativo ao mês selecionado)
         const mesesHistorico = 6;
-        const dataCorteHistorico = new Date(anoAtual, mesAtual - mesesHistorico + 1, 1).toISOString().split('T')[0];
+        const dataCorteHistorico = new Date(anoRef, mesRef - mesesHistorico + 1, 1).toISOString().split('T')[0];
 
         // --- 1. CONSULTAS AO BANCO ---
         
-        // A. Saldo Acumulado
+        // A. Saldo Acumulado (Mantido Intacto - Visão Geral Absoluta)
         const sqlSaldo = `
             SELECT 
                 SUM(CASE WHEN type = 'revenue' THEN amount ELSE -amount END) as total 
@@ -31,7 +41,7 @@ router.get('/', (req, res) => {
         `;
         const saldoRes = queryAll(sqlSaldo);
 
-        // B. Resumo do Mês Atual (Receitas vs Despesas)
+        // B. Resumo do Mês (Receitas vs Despesas limitadas ao período selecionado)
         const sqlMes = `
             SELECT type, SUM(amount) as total 
             FROM Transactions 
@@ -40,7 +50,7 @@ router.get('/', (req, res) => {
         `;
         const mesRes = queryAll(sqlMes, [inicioMes, fimMes]);
 
-        // C. Despesas por Categoria (Gráfico Rosca)
+        // C. Despesas por Categoria (Gráfico Rosca limitado ao período selecionado)
         const sqlCat = `
             SELECT c.name, SUM(t.amount) as total 
             FROM Transactions t
@@ -51,18 +61,18 @@ router.get('/', (req, res) => {
         `;
         const catRes = queryAll(sqlCat, [inicioMes, fimMes]);
 
-        // D. Histórico de Transações para Gráfico (Últimos 6 meses)
+        // D. Histórico de Transações para Gráfico (Relativo ao período selecionado)
         const sqlHist = `
             SELECT 
                 strftime('%Y-%m', date) as mes,
                 type,
                 SUM(amount) as total
             FROM Transactions
-            WHERE date >= ? 
+            WHERE date >= ? AND date <= ?
             GROUP BY mes, type
             ORDER BY mes ASC;
         `;
-        const histRes = queryAll(sqlHist, [dataCorteHistorico]);
+        const histRes = queryAll(sqlHist, [dataCorteHistorico, fimMes]);
 
         // E. Alertas de Teto de Gastos (Gestão por Exceção >= 85%)
         const sqlBudget = `
@@ -110,7 +120,7 @@ router.get('/', (req, res) => {
             },
             graficoCategorias: catRes,
             graficoHistorico: histRes,
-            alertasOrcamento: alertasOrcamento // <- Novo Array de Alertas
+            alertasOrcamento: alertasOrcamento
         });
 
     } catch (err) {
